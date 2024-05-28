@@ -1,13 +1,11 @@
-//
-//
-//
-#ifndef Common_hpp
-#define Common_hpp
+#pragma once
 
 #include <stdarg.h>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <functional>
+#include <unistd.h>
 
 
 using u8 = uint8_t;
@@ -20,6 +18,3 @@ using i32 = int32_t;
 using i64 = int64_t;
 using f32 = float;
 using f64 = double;
-
-
-#endif

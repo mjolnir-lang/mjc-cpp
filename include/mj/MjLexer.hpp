@@ -1,564 +1,354 @@
 #pragma once
 
-#include "mj/ast/MjToken.hpp"
+#include <mj/ast/MjToken.hpp>
 
-#include "std/Vector.hpp"
-#include "std/Queue.hpp"
-#include "std/List.hpp"
-#include "std/String.hpp"
-#include "std/File.hpp"
+#include <std/File.hpp>
 
 
-enum class State : u32 {
-    DECLARATION = 1 << 0,
-    COMMENT     = 1 << 1,
-    ANNOTATION  = 1 << 2,
-    TEMPLATE    = 1 << 3,
-    STRING      = 1 << 4,
-    RAW_STRING  = 1 << 5,
-    LAST_CAN_BE_TEMPLATE = 1 << 3,
-    LAST_CAN_BE_MODULE = 1 << 3,
-};
-
-
-class MjLexer {
+/// lexical errors (invalid tokens, unterminated string literals, invalid numbers, invalid identifiers, invalid operators)
+// Lexical    Lexer    Scanner
+// Syntax     Parser
+// Semantics  Compiler
+class MjLexerError {
 private:
-    static const Vector<MjTokenInfo> OPERATORS; // The operator token parse info
-    static const Vector<MjTokenInfo> KEYWORDS[10];  // The keyword token parse info
-private:
-    File &file_;
-    Queue<MjToken> tokens_;
-    Queue<State> states_;
-    String line_;
-    const MjToken *token_ = nullptr;
-    State state_ = State::DECLARATION;
-    u32 ln = 1;
-    u32 ch = 0;
+    MjToken _token;
+    StringView _message;
 public:
 
 
-    MjLexer(
-        const Path &path
+    MjLexerError(
+        MjToken token,
+        StringView message
     ) :
-        file_(System::open(path, "r"))
-    {
-        if (!file_.is_open()) {
-            System::out.print("Invalid source file path! '{:s}'", path);
-        }
+        _token(token),
+        _message(message)
+    {}
+};
 
-        tokens_.append(OPERATORS);
-        tokens_.append(KEYWORDS);
-        line_ = file_.read_line();
-        token_ = scan();
+
+// semantic error (types, operators, math, templates, usages, missing, duplicate)
+class MjCompilerError {
+private:
+    StringView _message;
+public:
+
+
+    MjCompilerError(
+        StringView message
+    ) :
+        _message(message)
+    {}
+};
+
+
+class MjRuntimeError {
+private:
+    StringView _message;
+public:
+
+
+    MjRuntimeError(
+        StringView message
+    ) :
+        _message(message)
+    {}
+};
+
+
+struct MjLexerPosition {
+    u32 tokens_size;
+    u32 line_index = 0;
+    u16 byte_offset = 0;
+    u8 last_indent;
+    u8 indent;
+};
+
+
+/// The MjLexer parses a Mjolnir source file into a stream of tokens.
+/// The parsing is done in two ways. First, non-identifier/non-number characters
+/// are combined and consolidated into tokens and emitted when a sequence is
+/// terminated. Second, syntax rules are used to parse differently in different
+/// contexts by tracking state and indentation.
+class MjLexer {
+private:
+    File _file;
+    Vector<MjToken> _tokens;
+    StringView _line = nullptr;
+    u32 _line_index = 0;
+    u8 _line_indent = 0;
+    u8 _last_indent = 0;
+    bool _emit_subtokens = false;
+public:
+
+
+    MjLexer(const Path &path) :
+        _file(path)
+    {}
+
+
+    void parse();
+
+
+    const Vector<MjToken> &tokens() const {
+        return _tokens;
     }
 
 
-    const Path &file_path() const {
-        return file_.path();
+    StringView token_text(const MjToken &token) const {
+        return StringView(&_file[token.line][token.offset], token.size);
+    }
+private:
+
+
+    /// This is the main parsing function.
+    void parse_tokens();
+    void parse_tokens_fsm();
+    void parse_tokens_fsm2();
+
+
+    ///
+    /// Error Handling
+    ///
+
+
+    void error(StringView message) {
+        error(_tokens.back(), message);
     }
 
 
-    u32 line_number() const {
-        return ln;
+    void error(const MjToken &token, StringView message);
+
+
+    ///
+    /// Parse Context
+    ///
+
+
+    /// @brief Append a new token to the output buffer.
+    /// @param type 
+    /// @param size 
+    void append_token(MjTokenType type, u32 size);
+    void append_subtoken(MjTokenType type, u32 offset, u32 size);
+
+
+    /// @brief Save the Lexer state so that the current position can be restored if a subsequent parse operation fails.
+    MjLexerPosition save() {
+        return {
+            static_cast<u32>(_tokens.size()),
+            _line_index,
+            static_cast<u16>(_file[_line_index].size() - _line.size()),
+            _line_indent,
+            _last_indent
+        };
     }
 
 
-    u32 column_number() const {
-        return ch;
+    /// @brief Restore the lexer state from a previously saved position.
+    /// @param position The lexer position.
+    void restore(const MjLexerPosition &position) {
+        _tokens.resize(position.tokens_size);
+        _line = _file[position.line_index] + position.byte_offset;
+        _line_index = position.line_index;
+        _line_indent = position.indent;
+        _last_indent = position.last_indent;
     }
 
 
-    const MjToken make_token(StringView text, MjTokenType type) {
-        return tokens_.get(text, MjToken(text, type));
+    ///
+    /// Parse Tokens
+    ///
+
+
+    /// @brief Parse any token.
+    /// @return The type of token was parsed.
+    MjTokenType parse_token(bool skip_trailing_whitespace = true);
+
+
+    /// @brief Parse the given text as an operator of the given token type.
+    /// @param text The text of the token.
+    /// @param token_type The type of the token.
+    /// @return true if the token was parsed successfully.
+    Error parse_token(StringView text, MjTokenType token_type, bool skip_trailing_whitespace = true);
+
+
+    /// @brief Parse the given text as an operator of the given token type. Operators must have
+    /// whitespace around them.
+    /// @param text The text of the token.
+    /// @param token_type The type of the token.
+    /// @return true if the token was parsed successfully.
+    Error parse_operator(StringView text, MjTokenType token_type, bool skip_trailing_whitespace = true);
+
+
+    /// @brief Parse the given text as an operator of the given token type. Words must not be
+    /// followed by more word characters or be a module name.
+    /// @param text The text of the token.
+    /// @param token_type The type of the token.
+    /// @return true if the token was parsed successfully.
+    Error parse_word(StringView text, MjTokenType token_type, bool skip_trailing_whitespace = true);
+
+
+    ///
+    /// Parse Context
+    ///
+
+
+    /// @brief Parse all whitespace characters. This should be called after each token is parsed to
+    /// make sure that the parser is looking at valid text. We call this after each token instead
+    /// of before each token because sometimes we have to test the whitespace preceding the current
+    /// token. This will also handle newlines and track indentation as needed for end of statement
+    /// detection.
+    void skip_whitespace();
+
+
+    ///
+    /// Parse Compound Syntax Elements
+    ///
+
+
+    /// Parse an identifier. Either a keyword, function, type, constant, module, literal, or variable.
+    /// @return true if the element was parsed successfully.
+    Error parse_identifier();
+
+    Error parse_type_qualifier();
+    Error parse_type_name();
+    Error parse_variable_name();
+
+
+    /// @return true if the element was parsed successfully.
+    Error parse_import_statement();
+
+
+    /// Attempt to parse the next token as either a raw or an interpolated string.
+    ///
+    /// NOTE: Tokens are not emitted for escaped character sequences.
+    /// @return true if the element was parsed successfully.
+    Error parse_string_literal();
+    Error parse_raw_string_literal();
+    Error parse_interpolated_string_literal();
+    Error parse_numeric_literal();
+
+
+    /// @return true if the element was parsed successfully.
+    Error parse_operator();
+
+
+    /// Parse an expression.
+    ///
+    /// @return true if the element was parsed successfully.
+    Error parse_expression();
+
+
+    /// Parse a type expression.
+    ///
+    /// A type expression begins with either a type name or a CV-qualifier and is followed by zero or more type qualifiers.
+    /// @return true if the element was parsed successfully.
+    Error parse_type_expression();
+
+
+    /// Parse a unit expression.
+    ///
+    /// [A-Za-zµΩÅ°'"]|\^g|1/)[A-Za-z0-9⁰¹²³⁴⁵⁶⁷⁸⁹⁻⸍µΩÅ°'"·^*/-]*
+    /// @return true if the element was parsed successfully.
+    Error parse_unit_expression();
+
+
+    ///
+    /// Parse Compound Enclosed Syntax Elements
+    ///
+
+
+    /// @brief Parse a template parameter list.
+    /// <type Type [= Type], Type [var [= expr]], ...>
+    /// @return true if the element was parsed successfully.
+    Error parse_template_parameter_list();
+
+
+    /// @brief Parse a template argument list.
+    /// <Type, expr, ...>
+    /// @return true if the element was parsed successfully.
+    Error parse_template_argument_list();
+
+
+    /// @brief Parse a function parameter list.
+    /// (Type [var [= expr]], ...)
+    /// @return true if the element was parsed successfully.
+    Error parse_function_parameter_list();
+
+
+    /// @brief Parse a function argument list.
+    /// (expr, ...)
+    /// @return true if the element was parsed successfully.
+    Error parse_function_argument_list();
+
+
+    /// @brief Parse a parenthesis expression.
+    /// (expr)
+    /// @return true if the element was parsed successfully.
+    Error parse_parenthesis_expression();
+
+
+    /// @brief Parse a type cast expression.
+    /// (Type: expr)
+    /// @return true if the element was parsed successfully.
+    Error parse_type_cast_expression();
+};
+
+
+
+// Parser stuff
+/*
+    void error(MjToken token, StringView message) {
+        printf("%s:%u:%u: \x1B[31merror:\x1B[m ",
+            _file.path().c_str(), token.line, token.offset
+        );
+        printf("%.*s\n", message.size(), message.data());
+        printf("\x1B[35m%*.*s\x1B[m",
+            token.offset, token.size, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        );
     }
 
 
-    const MjToken &scan();
+    const MjToken &next();
 
 
     const MjToken *peek() const {
-        return token_;
-    }
-
-
-    const MjToken *next() {
-        const MjToken *token = this->token_;
-        this->token_ = scan();
-        return token;
+        return _tokens.back();
     }
 
 
     const MjToken *next_if_any(MjTokenType type) {
-        return token_->type == type ? next() : nullptr;
+        return _token->type == type ? &next() : nullptr;
     }
 
 
-    bool next_if(const MjToken &token) {
-        return *this->token_ == token ? next() : nullptr;
+    Error next_if(const MjToken &token) {
+        return *this->_token == token ? &next() : nullptr;
     }
 
 
     void expect(const MjToken &token) {
         if (next() != token) {
-            //raise SyntaxError(f"{this.path}:{this.ln}:{this.ch}: Expected: '{token.text}'");
+            printf("%s:%u:%u: Expected: '%.*s'\n",
+                _file.path().c_str(), _token.line, _token.offset, _token.size, &_file[_token.line][_token.offset]
+            );
         }
     }
 
 
     const MjToken *expect_any(MjTokenType type) {
         if (next().type != type) {
-            //raise SyntaxError(f"{this.path}:{this.ln}:{this.ch}: Expected: '{type}'")
+            printf("%s:%u:%u: Expected: '%.*s'\n",
+                _file.path().c_str(), _token.line, _token.offset, _token.size, MjTokenType_name(type).size(), MjTokenType_name(type).data()
+            );
         }
 
-        return token;
+        return _token;
     }
 
 
     /// @brief Return true if the token is the first in the line.
     /// This is used for tracking indentation as a parsing hint for handling errors.
-    bool next_is_first() {
+    Error next_is_first() {
         return false;
     }
-
-
-private:
-
-
-    void push_state(State state) {
-        states_.push(state_);
-        state_ = state;
-    }
-
-
-    void pop_state() {
-        state_ = states_.front();
-        states_.pop();
-    }
-
-
-    const MjToken parse() {
-        u32 codepoint;
-
-        // Handle whitespace, newline, and indentation.
-        if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') {
-            consume_whitespace();
-            u32 line = 0; // The line number (1 indexed)
-            u32 indent = 0; // True if this is the first token in the line
-            u32 column = 0; // The column number in characters
-            u32 byte_offset = 0; // The line size in bytes.
-            bool is_newline = 0; // True if this is the first token in the line
-        }
-
-        switch (ch) {
-        case '>':
-            if (state_ == State::TEMPLATE) {
-                return MjToken::CA;
-            }
-
-            if (ch == '>') {
-                return MjToken::ASR;
-            }
-
-            if (ch != '>') {
-                return MjToken::LES;
-            }
-
-            if (ch == '>') {
-                return MjToken::LSR_SET;
-            }
-
-            return MjToken::GTR;
-        case '>>>':
-            return MjToken::LSR;
-        case '>>=':
-            return MjToken::ASR_SET;
-        case '<':
-            if (state_ == State::LAST_CAN_BE_TEMPLATE) {
-                return MjToken::OA;
-            }
-
-            return MjToken::LES;
-        case '<<':
-            return MjToken::LSL;
-        case '<<=':
-            return MjToken::LSL_SET;
-        case '::':
-            return MjToken::SCOPE;
-        case '->':
-            return MjToken::PTR;
-        case '++':
-            return MjToken::INC;
-        case '--':
-            return MjToken::DEC;
-        case '&&':
-            return MjToken::LAND;
-        case '^^':
-            return MjToken::LXOR;
-        case '||':
-            return MjToken::LOR;
-        case '*=':
-            return MjToken::MUL_SET;
-        case '/=':
-            return MjToken::DIV_SET;
-        case '%=':
-            return MjToken::REM_SET;
-        case '+=':
-            return MjToken::ADD_SET;
-        case '-=':
-            return MjToken::SUB_SET;
-        case '&=':
-            return MjToken::AND_SET;
-        case '^=':
-            return MjToken::XOR_SET;
-        case '|=':
-            return MjToken::OR_SET;
-        case '<=':
-            return MjToken::LEQ;
-        case '>=':
-            return MjToken::GEQ;
-        case '==':
-            return MjToken::EQU;
-        case '!=':
-            return MjToken::NEQ;
-        case '.':
-            return MjToken::DOT;
-        case '!':
-            return MjToken::NOT;
-        case '~':
-            return MjToken::INV;
-        case '*':
-            return MjToken::MUL;
-        case '/':
-            return MjToken::DIV;
-        case '%':
-            return MjToken::REM;
-        case '+':
-            return MjToken::ADD;
-        case '-':
-            return MjToken::SUB;
-        case '&':
-            return MjToken::AND;
-        case '^':
-            return MjToken::XOR;
-        case '|':
-            return MjToken::OR;
-        case '=':
-            return MjToken::SET;
-        case '?':
-            return MjToken::QUESTION;
-        case ':':
-            return MjToken::COLON;
-        case ';':
-            return MjToken::SEMICOLON;
-        case ',':
-            return MjToken::COMMA;
-        case '(':
-            return MjToken::OP;
-        case ')':
-            return MjToken::CP;
-        case '[':
-            // push scope '['
-            return MjToken::OS;
-        case ']':
-            // This is the end of a subscript operator, slice operator, bitfield operator, or array type specifier.
-            // pop scope if within an '['
-            return MjToken::CS;
-        case '{':
-            return MjToken::OB;
-        case '}':
-            return MjToken::CB;
-        case '@':
-            // push scope '@' pop scope at newline.
-            push_state(State::ANNOTATION);
-            return MjToken::AT;
-        default:
-            StringView text;
-
-            if (text.size() > 10) {
-                return MjToken::IDENT;
-            }
-
-            for (MjTokenInfo keyword : KEYWORDS[text.size()]) {
-                if (text == keyword.token.text) {
-                    return keyword.token;
-                }
-            }
-
-            return MjToken::IDENT;
-        }
-    }
-
-    /// @annotation(...)
-    void consume_annotation() {
-        if (state_ != State::DECLARATION || ch != '@') {
-            return;
-        }
-
-        consume_variable_name();
-        consume_parameter_list();
-    }
-
-
-    /// [A-Za-z0-9_][A-Za-z0-9_.+-]+(?=::)
-    void consume_module_name() {
-        u32 ch = file_.peek();
-
-        if (!(
-            (ch >= '0' && ch <= '9') ||
-            (ch >= 'A' && ch <= 'Z') ||
-            (ch >= 'a' && ch <= 'z') ||
-            ch == '_'
-        )) {
-            return;
-        }
-
-        do {
-            ch = file_.peek();
-        } while (
-            (ch >= '0' && ch <= '9') ||
-            (ch >= 'A' && ch <= 'Z') ||
-            (ch >= 'a' && ch <= 'z') ||
-            ch == '_' || 
-            ch == '.' || 
-            ch == '+' || 
-            ch == '-'
-        );
-
-        consume_whitespace();
-        consume_comment();
-
-        if (ch == ':' && ch == ':') {
-            file_.peek();
-        }
-    }
-
-
-    /// (false|null|true)
-    void consume_constant_literal() {
-
-    }
-
-
-    /// [0-9_]*[A-Z][A-Z0-9_]+
-    void consume_constant_variable_name() {
-        u32 ch = file_.peek();
-
-        if (!(
-            (ch >= '0' && ch <= '9') ||
-            (ch >= 'A' && ch <= 'Z') ||
-            ch == '_'
-        )) {
-            return;
-        }
-
-        do {
-            ch = file_.peek();
-        } while (
-            (ch >= '0' && ch <= '9') ||
-            (ch >= 'A' && ch <= 'Z') ||
-            ch == '_'
-        );
-    }
-
-
-    /// [0-9]*[a-z_][a-z0-9_]*
-    void consume_variable_name() {
-        do {
-            ch = file_.peek();
-        } while ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_');
-    }
-
-
-    /// [A-Za-z0-9_][A-Za-z0-9_.+-]+(?=::)
-    void consume_function_name() {
-        consume_variable_name();
-
-        if (ch == '<') {
-            // template
-        }
-
-        if (ch == '(') {
-            // function
-        } else {
-            // variable
-        }
-    }
-
-
-    /// ([iu](?:8|16|32|64|128)|f(?:16|32|64|80|128)|bool|void|[A-Z](?:[A-Z0-9]*[a-z][A-Za-z0-9-]*)?)
-    void consume_type_name() {
-        if (ch == "bool") {
-            // fundamental type
-        } else if (ch == "void") {
-            // fundamental type
-        } else if (ch == 'i' || ch == 'u' || ch == 'f') {
-            // fundamental type
-        } else if (
-            (ch >= 'A' && ch <= 'Z')
-        ) {
-            // user defined type
-        }
-
-        if (ch == '\'') {
-            consume_unit_expression();
-        }
-    }
-
-
-    /// [A-Za-z0-9_][A-Za-z0-9_.+-]+(?=::)
-    void consume_type_expression() {
-    }
-
-
-    /// [A-Za-zµΩÅ°'"]|\^g|1/)[A-Za-zµΩÅ°'"^]*
-    void consume_unit_name() {
-        u32 ch = file_.peek();
-
-        while (ch != EOF) {
-            if (
-                (ch >= 'A' && ch <= 'Z') ||
-                (ch >= 'a' && ch <= 'z') ||
-                ch == 'µ' ||
-                ch == 'Ω' ||
-                ch == '°' || ch == '\'' || ch == '"'
-            ) {
-                ;
-            }
-        }
-    }
-
-
-    /// [A-Za-zµΩÅ°'"]|\^g|1/)[A-Za-z0-9⁰¹²³⁴⁵⁶⁷⁸⁹⁻⸍µΩÅ°'"·^*/-]*
-    void consume_unit_expression() {
-        u32 ch = file_.peek();
-
-        while (ch != EOF) {
-            consume_unit_name();
-            if (
-                (ch >= '0' && ch <= '9') ||
-                ch == '*' || ch == '/' || ch == '^' || ch == '-' || ch == '·' ||
-                ch == '⁰' ||
-                ch == '¹' ||
-                ch == '²' ||
-                ch == '³' ||
-                ch == '⁴' ||
-                ch == '⁵' ||
-                ch == '⁶' ||
-                ch == '⁷' ||
-                ch == '⁸' ||
-                ch == '⁹' ||
-                ch == '⁻' ||
-                ch == '⸍'
-            ) {
-                ;
-            }
-        }
-    }
-
-
-    /// 
-    /// (
-    ///     \d+(?:\.\d+)?(?:([Ee])[+-]?\d+)?(f(?:16|32|64|80|128)?|[iu](?:8|16|32|64|128)?|x)?
-    ///     (0x)[0-9A-Fa-f']+(?:\\.\\h+)?(?:([Pp])[+-]\\d+)?(f(?:16|32|64|80|128)?|[iu](?:8|16|32|64|128)?)?
-    ///     (0o)[0-7']+([iu](?:8|16|32|64|128)?)?
-    ///     (0b)[01']+([iu](?:8|16|32|64|128)?)?
-    /// ) \b(\s+(?:[A-Za-zµΩ°'"]|\^g|1/)[A-Za-z0-9⁰¹²³⁴⁵⁶⁷⁸⁹⁻⸍µΩ°'\"·^*/-]*)?
-    ///
-    void consume_numeric_literal() {
-        
-        // Unit expression has priority after a numeric literal.
-        consume_unit_expression();
-    }
-
-
-    /// "(\\"|[^"])*"
-    void consume_string_literal() {
-        if (file_.peek() != '"') {
-            return;
-        }
-
-        do {
-            ;
-            // \\(["0nrt\\]|x\h\h|u\h\h\h\h) "constant.character.escape.mj"
-            // \\(x\h*|u\h*|.) "invalid.illegal.mj"
-        } while (file_.peek() != '"');
-    }
-
-
-    /// '[^']*'
-    void consume_raw_string_literal() {
-        if (file_.peek() != '\'') {
-            return;
-        }
-
-        do {
-            ;
-        } while (file_.peek() != '\'');
-    }
-
-
-    /// [A-Za-z0-9_][A-Za-z0-9_.+-]+(?=::)
-    void consume_function_declaration() {
-        // type variable <params, args> (params, args)
-    }
-
-
-    /// [A-Za-z0-9_][A-Za-z0-9_.+-]+(?=::)
-    void consume_keyword() {
-
-        /// Semantic Keywords (followed by template parameter list)
-        if (
-            token->text == "bitfield" ||
-            token->text == "enum" ||
-            token->text == "impl" ||
-            token->text == "type" ||
-            token->text == "variant" ||
-            token->text == "where"
-        ) {
-            return;
-        }
-
-        /// Semantic Keywords (followed by scope)
-        if (
-            token->text == "asm" ||
-            token->text == "catch" ||
-            token->text == "do" ||
-            token->text == "else" ||
-            token->text == "try"
-        ) {
-            return;
-        }
-
-        /// Semantic Keywords (\w+<...>)
-        if (
-            token->text == "bitfield"
-        ) {
-            return;
-        }
-
-        /// Semantic Keywords (\w+<...>)
-        if (
-            token->text == "bitfield"
-        ) {
-            return;
-        }
-
-        // Pure keywords.
-        if (
-            token->text == "as" ||
-            token->text == "break" ||
-            token->text == "continue" ||
-            token->text == "fail" ||
-            token->text == "in" ||
-            token->text == "is" ||
-            token->text == "return" ||
-            token->text == "yield"
-        ) {
-            return;
-        }
-
-        if (consume_identifier()) {
-            return;
-        }
-    }
-};
+*/

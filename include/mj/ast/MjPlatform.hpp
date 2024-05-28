@@ -1,9 +1,6 @@
 #pragma once
 
-#include "mj/ast/MjModule.hpp"
-
-#include "std/Path.hpp"
-
+#include <mj/ast/MjModule.hpp>
 
 
 class MjPlatform {

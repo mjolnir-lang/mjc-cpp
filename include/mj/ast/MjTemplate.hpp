@@ -1,9 +1,12 @@
 #pragma once
 
-#include "mj/ast/MjComment.hpp"
-#include "mj/ast/MjType.hpp"
+#include <mj/ast/MjComment.hpp>
+#include <mj/ast/MjType.hpp>
 
-#include "mj/ast/MjScope.hpp"
+#include <mj/ast/MjScope.hpp>
+
+
+using MjTemplateArgumentList = Vector<MjTemplateArgument *>;
 
 
 /// @brief There are three kinds of template parameters, type, non-type, and template
@@ -19,26 +22,12 @@ class MjTemplateParameter {
 public:
 
 
-    virtual ~MjTemplateParameter() = default;
+    virtual
+    ~MjTemplateParameter() = default;
 
 
-    virtual MjTemplateParameterType template_parameter_type() const = 0;
-};
-
-
-/// @brief An `MjTypeTemplateParameter` is a template parameter of type type.
-class MjTypeTemplateParameter {
-private:
-    const MjType &type_;
-public:
-
-
-    ~MjTypeTemplateParameter() = default;
-
-
-    MjTemplateParameterType template_parameter_type() const {
-        return MjTemplateParameterType::TYPE;
-    }
+    virtual
+    MjTemplateParameterType template_parameter_type() const = 0;
 };
 
 
@@ -47,11 +36,16 @@ class MjTemplateArgument {
 public:
 
 
-    virtual ~MjTemplateArgument() = default;
+    virtual
+    ~MjTemplateArgument() = default;
 
 
-    virtual MjTemplateParameterType template_parameter_type() const = 0;
+    virtual
+    MjTemplateParameterType template_parameter_type() const = 0;
 };
+
+
+using MjTemplateParameterList = Vector<MjTemplateParameter *>;
 
 
 class MjTemplateName {

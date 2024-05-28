@@ -1,32 +1,30 @@
 #pragma once
 
-#include "mj/ast/MjToken.hpp"
+#include <mj/ast/MjToken.hpp>
 
 
-/// @brief An `MjComment` is a source code annotation attatched to AST objects.
+/// @brief An `MjComment` is a source code annotation attached to AST objects.
 class MjComment {
 private:
-    String &text_;
-    //String &brief;
-    //String &params;
-    //String &returns;
-    bool is_documentation_;
+    String &_text;
+    bool _is_formatted;
 public:
 
 
     MjComment(
-        String &text
+        String &text,
+        bool is_formatted
     ) :
-        text_(text)
+        _text(text), _is_formatted(is_formatted)
     {}
 
 
-    bool is_documentation() const {
-        return is_documentation_;
+    bool is_formatted() const {
+        return _is_formatted;
     }
 
 
     StringView text() const {
-        return text_;
+        return _text;
     }
 };

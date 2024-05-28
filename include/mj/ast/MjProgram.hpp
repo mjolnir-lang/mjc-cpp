@@ -1,30 +1,17 @@
 #pragma once
 
-#include "mj/ast/MjModule.hpp"
-#include "mj/ast/MjFreeFunction.hpp"
-
-#include "std/File.hpp"
-
+#include <mj/ast/MjModule.hpp>
+#include <mj/ast/MjFunction.hpp>
 
 
 /// @brief A Program is an executable without a platform.
 /// It lists dependencies and has a startup and a main function.
 class MjProgram {
 private:
-    String name_;
-    List<MjModule> modules_;
-    MjFreeFunction startup_function_;
-    MjFreeFunction main_function_;
+    Vector<MjModule *> modules_;
+    MjFunction *startup_function_;
+    MjFunction *main_function_;
 public:
-
-
-    MjProgram(
-        StringView name
-    ) :
-        name_(name)
-    {
-        //add_builtins()
-    }
 
 
     void export_source(const Path &path) {

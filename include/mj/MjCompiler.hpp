@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mj/ast/MjProgram.hpp"
+#include <mj/ast/MjProgram.hpp>
 
 
 class MjCompiler {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "mj/ast/MjType.hpp"
-#include "mj/ast/MjStorage.hpp"
+#include <mj/ast/MjType.hpp>
+#include <mj/ast/MjStorage.hpp>
 
 
 /// An MjObject is an association of a type with storage.
@@ -11,25 +11,31 @@ public:
 
 
     // Return the type information.
-    virtual const MjType &type() const = 0;
+    const MjType *type() const {
+        return nullptr;
+    }
 
 
     // Return the type information.
     u32 size() const {
-        return type().size();
+        return type()->size();
     }
 
 
     // Return the type information.
     u32 alignment() const {
-        return type().alignment();
+        return type()->alignment();
     }
 
 
     // Return the storage
-    virtual MjStorage &storage() = 0;
+    MjStorage *storage() {
+        return nullptr;
+    }
 
 
     // Return the storage
-    virtual const MjStorage &storage() const = 0;
+    const MjStorage *storage() const {
+        return nullptr;
+    }
 };

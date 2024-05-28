@@ -1,88 +1,236 @@
 #pragma once
 
-#include "std/String.hpp"
-
-#include <cstring>
+#include <std/Slice.hpp>
 
 
 /// @brief A non-owning string.
 class StringView {
 private:
-    const u8 *data_ = nullptr;
-    u32 size_ = 0;
+    Slice<const u8> _data;
 public:
 
 
-    StringView(const u8 *data, u32 size) :
-        data_(data),
-        size_(size)
+    constexpr
+    StringView(std::nullptr_t) noexcept : _data(nullptr) {}
+
+
+    constexpr
+    StringView(const u8 *data, u32 size) noexcept : _data(data, size) {}
+
+
+    constexpr
+    StringView(Slice<const u8> other) noexcept : _data(other) {}
+
+
+    template<u32 SIZE>
+    constexpr
+    StringView(const char (&data)[SIZE]) noexcept :
+        _data(static_cast<const u8 *>(static_cast<const void *>(data)), SIZE - 1)
     {}
 
 
-    StringView(StringView other, u32 size) :
-        data_(other.data_),
-        size_(size)
+    constexpr
+    StringView(const char *data, u32 size) noexcept :
+        _data(static_cast<const u8 *>(static_cast<const void *>(data)), size)
     {}
 
 
-    StringView(const String &other) :
-        data_(other.data()),
-        size_(other.size())
-    {}
+    ///
+    /// Type Casts
+    ///
 
 
-    StringView(String other, u32 size) :
-        data_(other.data()),
-        size_(size)
-    {}
+    constexpr
+    operator Slice<const u8>() const noexcept {
+        return _data;
+    }
 
 
-    template<size_t SIZE>
-    StringView(const char (&data)[SIZE]) :
-        data_(reinterpret_cast<const u8 *>(data)),
-        size_(SIZE)
-    {}
+    constexpr
+    operator const u8 *() const noexcept {
+        return _data;
+    }
 
 
-    StringView(const char *data, u32 size) :
-        data_(reinterpret_cast<const u8 *>(data)),
-        size_(size)
-    {}
+    ///
+    /// Operators
+    ///
 
 
-    StringView(std::nullptr_t) {}
+    /// Return true if this object is equal to the other object.
+    constexpr
+    bool operator==(StringView other) const noexcept {
+        return is_equal(other);
+    }
 
 
-    StringView() {}
+    /// Return true if this object is not equal to the other object.
+    constexpr
+    bool operator!=(StringView other) const noexcept {
+        return !is_equal(other);
+    }
 
 
-    ~StringView() {}
+    /// Return true if this object is less than the other object.
+    constexpr
+    bool operator<(StringView other) const noexcept {
+        return compare(other) < 0;
+    }
+
+
+    /// Return true if this object is greater than the other object.
+    constexpr
+    bool operator>(StringView other) const noexcept {
+        return compare(other) > 0;
+    }
+
+
+    /// Return true if this object is less than or equal to the other object.
+    constexpr
+    bool operator<=(StringView other) const noexcept {
+        return compare(other) <= 0;
+    }
+
+
+    /// Return true if this object is greater than or equal to the other object.
+    constexpr
+    bool operator>=(StringView other) const noexcept {
+        return compare(other) >= 0;
+    }
+
+
+    constexpr
+    const u8 &operator*() const {
+        return *_data;
+    }
+
+
+    constexpr
+    const u8 &operator[](u32 index) const {
+        return _data[index];
+    }
+
+
+    constexpr
+    StringView operator++(int) {
+        StringView tmp(*this);
+        _data += 1;
+        _size -= 1;
+        return tmp;
+    }
+
+
+    constexpr
+    StringView &operator++() {
+        _data += 1;
+        _size -= 1;
+        return *this;
+    }
+
+
+    constexpr
+    StringView operator+(u32 size) const {
+        return StringView(_data + size, _size - size);
+    }
+
+
+    constexpr
+    StringView &operator+=(u32 size) {
+        _data += size;
+        _size -= size;
+        return *this;
+    }
+
+
+    constexpr
+    StringView operator--(int) {
+        StringView tmp(*this);
+        _data -= 1;
+        _size += 1;
+        return tmp;
+    }
+
+
+    constexpr
+    StringView &operator--() {
+        _data -= 1;
+        _size += 1;
+        return *this;
+    }
+
+
+    constexpr
+    StringView &operator-=(u32 size) {
+        _data -= size;
+        _size += size;
+        return *this;
+    }
+
+
+    constexpr
+    StringView operator-(u32 size) const noexcept {
+        return StringView(_data - size, _size + size);
+    }
+
+
+    ///
+    /// Properties
+    ///
 
 
     // Return true if the String contains no elements.
-    bool is_empty() const {
-        return size_ != 0;
+    constexpr
+    bool is_empty() const noexcept {
+        return _data.is_empty();
     }
 
 
     // Return the number of elements in the String.
-    u32 size() const {
-        return size_;
+    constexpr
+    u32 size() const noexcept {
+        return _data.size();
     }
 
 
-    const u8 *data() const {
-        return data_;
+    constexpr
+    const u8 *data() const noexcept {
+        return _data.data();
     }
 
 
-    StringView slice(u32 start, u32 end) {
-        return StringView(&data_[start], end - start);
+    constexpr
+    StringView slice(u32 start) const noexcept {
+        return _data.slice(start);
     }
 
 
-    const StringView slice(u32 start, u32 end) const {
-        return StringView(&data_[start], end - start);
+    constexpr
+    StringView slice(u32 start, u32 end) const noexcept {
+        return _data.slice(start, end);
+    }
+
+
+    constexpr
+    bool starts_with(StringView other) const noexcept {
+        return _data.starts_with(other);
+    }
+
+
+    constexpr
+    bool starts_with(u8 ch) const noexcept {
+        return _data.starts_with(ch);
+    }
+
+
+    constexpr
+    bool contains(StringView other) const noexcept {
+        return _data.contains(other);
+    }
+
+
+    constexpr
+    bool contains(u8 ch) const noexcept {
+        return _data.contains(ch);
     }
 
 
@@ -91,34 +239,25 @@ public:
     ///
 
 
+    constexpr
     bool is_equal(const u8 *data, u32 size) const {
-        if (size_ != size) {
+        if (_size != size) {
             return false;
         }
 
-        return memcmp(data_, data, size) == 0;
+        return memcmp(_data, data, size) == 0;
     }
 
 
+    constexpr
     bool is_equal(StringView other) const {
-        return is_equal(other.data_, other.size_);
+        return is_equal(other._data, other._size);
     }
 
 
+    constexpr
     bool is_equal(StringView other, u32 size) const {
-        return is_equal(other.data_, size);
-    }
-
-
-    /// Return true if this object is equal to the other object.
-    bool operator==(StringView other) const {
-        return is_equal(other);
-    }
-
-
-    /// Return true if this object is not equal to the other object.
-    bool operator!=(StringView other) const {
-        return !is_equal(other);
+        return is_equal(other._data, size);
     }
 
 
@@ -127,105 +266,26 @@ public:
     ///
 
 
+    constexpr
     i32 compare(const u8 *data, u32 size) const {
-        i32 result = memcmp(data_, data, std::min(size_, size));
+        i32 result = memcmp(_data, data, std::min(_size, size));
 
         if (result) {
             return result;
         }
 
-        return size_ - size;
+        return _size - size;
     }
 
 
+    constexpr
     i32 compare(StringView other) const {
-        return compare(other.data_, other.size_);
+        return compare(other._data, other._size);
     }
 
 
+    constexpr
     i32 compare(StringView other, u32 size) const {
-        return compare(other.data_, size);
-    }
-
-    /// Return true if this object is less than the other object.
-    bool operator<(StringView other) const {
-        return compare(other) < 0;
-    }
-
-
-    /// Return true if this object is greater than the other object.
-    bool operator>(StringView other) const {
-        return compare(other) > 0;
-    }
-
-
-    /// Return true if this object is less than or equal to the other object.
-    bool operator<=(StringView other) const {
-        return compare(other) <= 0;
-    }
-
-
-    /// Return true if this object is greater than or equal to the other object.
-    bool operator>=(StringView other) const {
-        return compare(other) >= 0;
-    }
-
-
-    ///
-    /// Indexable<const u8>
-    ///
-
-
-    const u8 &operator[](u32 index) {
-        return data_[index];
-    }
-
-
-    const u8 &operator[](u32 index) const {
-        return data_[index];
-    }
-
-
-    StringView &operator++(int) {
-        StringView tmp(*this);
-        data_ += 1;
-        size_ -= 1;
-        return tmp;
-    }
-
-
-    StringView &operator++() {
-        data_ += 1;
-        size_ -= 1;
-        return *this;
-    }
-
-
-    StringView &operator+=(u32 size) {
-        data_ += size;
-        size_ -= size;
-        return *this;
-    }
-
-
-    StringView &operator--(int) {
-        StringView tmp(*this);
-        data_ -= 1;
-        size_ += 1;
-        return tmp;
-    }
-
-
-    StringView &operator--() {
-        data_ -= 1;
-        size_ += 1;
-        return *this;
-    }
-
-
-    StringView &operator-=(u32 size) {
-        data_ -= size;
-        size_ += size;
-        return *this;
+        return compare(other._data, size);
     }
 };

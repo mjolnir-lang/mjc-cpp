@@ -1,8 +1,7 @@
 #pragma once
 
-#include "mj/ast/MjScope.hpp"
-
-#include "std/Path.hpp"
+#include <mj/ast/MjScope.hpp>
+#include <std/File.hpp>
 
 
 // Modules participate in the module dependency graph for compilation order.
@@ -13,10 +12,10 @@ private:
     const MjToken &name_;
     MjModule *parent_;              // The parent scope
     Vector<MjModule *> modules_;      // Used to keep track of which modules have been imported
-    Vector<MjBasicType *> basic_types_;     // Defined types
+    Vector<MjType *> basic_types_;     // Defined types
     Vector<MjTemplate *> templates_;  // Defined templates (generic types)
     Vector<MjFunction *> functions_;  // The free functions
-    Vector<MjOperator *> operators_;  // The operator overloads
+    Vector<MjFunction *> operators_;  // The operator overloads
 public:
 
 
@@ -39,7 +38,7 @@ public:
 
 
     /// @brief Return the list of member variables defined by the type.
-    const Vector<MjBasicType *> &basic_types() const {
+    const Vector<MjType *> &basic_types() const {
         return basic_types_;
     }
 
@@ -57,7 +56,7 @@ public:
 
 
     /// @brief Return the list of operators defined by the type.
-    const Vector<MjOperator *> &operators() const {
+    const Vector<MjFunction *> &operators() const {
         return operators_;
     }
 

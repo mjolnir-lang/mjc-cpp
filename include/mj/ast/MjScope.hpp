@@ -1,8 +1,6 @@
 #pragma once
 
-#include "mj/ast/MjType.hpp"
-
-#include "std/List.hpp"
+#include <mj/ast/MjType.hpp>
 
 
 // There are several types of scopes:
@@ -24,8 +22,8 @@ public:
 
 
     // basic type lookup, then derived type walking
-    MjBasicType *get_type(const MjToken &name) {
-        MjBasicType *type = types[name];
+    MjType *get_type(const MjToken &name) {
+        MjType *type = types[name];
 
         if (type) {
             return type;

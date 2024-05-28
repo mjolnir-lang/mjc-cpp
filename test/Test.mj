@@ -1,0 +1,141 @@
+0 1/mV
+32
+23.5
+-21
++32.45f
+23.45e67
+23.45e+67
+23.45e-67
+23.45u
+-23.45u8
+23e5i64
++0x3A2FE
+-0o3256
+-0b1111001u32
+0x3FEAp+32
+
+mod::var
+var.var
+
+var => var
+
+@ann
+
+var * var
+var ^ var
+var & var
+var ? var
+
+var++
+++var
+var--
+--var
+
+var = var
+
+var >>= var
+var <<= var
+var *= var
+var /= var
+var %= var
+var += var
+var -= var
+var &= var
+var ^= var
+var |= var
+var &&= var
+var ^^= var
+var ||= var
+
+var >> var
+var << var
+var * var
+var / var
+var % var
+var + var
+var - var
+var & var
+var ^ var
+var | var
+var && var
+var ^^ var
+var || var
+var !& var
+var !^ var
+var !| var
+
+
+var == var
+var != var
+var <=> var
+var < var
+var <= var
+var > var
+var >= var
+
+!var
+~var
+
+var ? var : var
+
+var;
+var, var
+
+func()
+
+
+var[]
+var[3]
+
+{ }
+
+enum<u32>
+
+1-Wire::1WireController()
+
+0x00p+12
+
+
+// line comment
+/// block comment
+import Path
+
+
+class Test {
+    u32 index = 0
+    StringView text = ""
+
+
+    @shared
+    const u8[34] VALUES = [
+        for (u32 i = 0; i < this.size(); i++) {
+            this[i] = 3 * i
+        }
+    ]
+
+
+    Test(u32 index, StringView text) {
+        .index = index
+        .text = text
+    }
+
+
+    void increment() {
+        index += 1
+    }
+
+
+    StringView text() =>
+        text
+
+
+    StringView {:}() =>
+        text
+}
+
+u32 x
+Error err
+void()* fn
+
+((x, err), fn) = (7 as ((u32, Error), void()*)()*[3])[1]()
+fn()

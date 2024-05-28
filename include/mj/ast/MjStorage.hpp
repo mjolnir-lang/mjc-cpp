@@ -1,5 +1,7 @@
 #pragma once
 
+#include <std/Memory.hpp>
+
 
 /// An `MjStorage` object is a memory backing for compile time emulation and execution as well as for storing raw data.
 /// It provides methods for detecting overlap and modification or exclusive access to data. This allows assumptions to be
@@ -7,7 +9,7 @@
 class MjStorage {
 private:
     MjStorage *owner; // If non-null, the storage is managed by the other storage object
-    void *data_;      // The storage data
+    u8 *data_;      // The storage data
 public:
 
 

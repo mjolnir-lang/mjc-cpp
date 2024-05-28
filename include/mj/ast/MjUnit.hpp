@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mj/ast/MjToken.hpp"
+#include <mj/ast/MjToken.hpp>
 
 
 class MjUnit {

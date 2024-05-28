@@ -1,4 +1,4 @@
-#include "mj/ast/MjOperator.hpp"
+#include <mj/ast/MjOperator.hpp>
 
 
 const MjOperator MjOperator::SCOPE(MjToken::SCOPE,   47, 48);

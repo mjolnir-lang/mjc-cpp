@@ -1,6 +1,12 @@
 #pragma once
 
-#include "mj/ast/MjType.hpp"
+#include <mj/ast/MjType.hpp>
+
+
+using MjFunctionArgument = MjExpression;
+
+
+using MjFunctionArgumentList = Vector<MjFunctionArgument *>;
 
 
 class MjFunctionParameter : public MjVariable {
@@ -57,33 +63,147 @@ public:
 };
 
 
-class MjFunctionParameterList {
-public:
-    Vector<MjFunctionParameter> parameters_;
-};
+using MjFunctionParameterList = Vector<MjFunctionParameter *>;
 
 
 /// @brief An `MjFunction` is an `MjStatement` object associated with a name and an `MjFunctionType`.
 class MjFunction {
+private:
+    MjType *_type;
+    MjComment *_comment;
+    MjStatement *_body;
+    const MjToken *_name;
+    Slice<const MjToken> _tokens;
+    MjFunctionParameterList _parameter_list;
 public:
 
 
-    virtual ~MjFunction() = default;
+    constexpr
+    MjFunction(Slice<const MjToken> tokens, const MjToken *name) noexcept :
+        _tokens(tokens),
+        _name(name)
+    {}
+
+
+    ///
+    /// Properties
+    ///
 
 
     // The comment associated with the variable
-    virtual const MjComment &comment() const = 0;
+    constexpr
+    bool has_comment() const noexcept {
+        return _comment != nullptr;
+    }
+
+
+    // The comment associated with the variable
+    constexpr
+    bool has_name() const noexcept {
+        return _name != nullptr;
+    }
+
+
+    // The comment associated with the variable
+    constexpr
+    bool is_anonymous() const noexcept {
+        return _name == nullptr;
+    }
+
+
+    // The comment associated with the variable
+    constexpr
+    MjComment *comment() const noexcept {
+        return _comment;
+    }
 
 
     // The variable name
-    virtual const MjToken &name() const = 0;
+    constexpr
+    const MjToken *name() const noexcept {
+        return _name;
+    }
 
 
-    // The variable type
-    virtual const MjFunctionType &type() const = 0;
+    // The function type
+    constexpr
+    MjType *type() const noexcept {
+        return _type;
+    }
 
 
     // The temporary sequence of tokens that make the definition
-    virtual const List<const MjToken *> &tokens() const = 0;
-};
+    constexpr
+    MjStatement *body() const noexcept {
+        return _body;
+    }
 
+
+    constexpr
+    MjType *return_type() const noexcept {
+        return _type ? _type->return_type() : nullptr;
+    }
+
+
+    constexpr
+    bool is_constructor() const noexcept {
+        return _type->is_constructor();
+    }
+
+
+    constexpr
+    bool is_destructor() const noexcept {
+        return _type->is_destructor();
+    }
+
+
+    constexpr
+    bool is_operator() const noexcept {
+        return _type->is_operator();
+    }
+
+
+    constexpr
+    bool is_lambda() const noexcept {
+        return _type->is_lambda();
+    }
+
+
+    constexpr
+    bool is_operator() const noexcept {
+        return _type->is_operator();
+    }
+
+
+    constexpr
+    bool is_method() const noexcept {
+        return _type->is_method();
+    }
+
+
+    constexpr
+    bool is_deterministic(MjFunctionArgumentList *argument_list) const noexcept {
+        if () {
+            // deterministic for all arguments...
+            return true;
+        }
+
+        if (is_method()) {
+            return false;
+        }
+
+        for (MjFunctionArgument *argument : *argument_list) {
+            if (!argument->is_deterministic()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    constexpr
+    MjFunctionParameterList *function_parameter_list() const noexcept {
+        return _type->function_parameter_list();
+    }
+};
