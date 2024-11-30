@@ -1,87 +1,35 @@
 #pragma once
 
-#include <mj/ast/MjType.hpp>
+#include <mj/ast/MjFunctionType.hpp>
+#include <mj/ast/MjFunctionArgumentList.hpp>
 
 
-using MjFunctionArgument = MjExpression;
+class MjFunctionTemplate;
+class MjBlockStatement;
 
 
-using MjFunctionArgumentList = Vector<MjFunctionArgument *>;
-
-
-class MjFunctionParameter : public MjVariable {
-public:
-    const MjType &type_;
-    const MjToken *name_;
-    MjExpression *default_value_;
-
-
-    MjFunctionParameter(
-        const MjType &type,
-        const MjToken *name,
-        MjExpression *default_value
-    ) :
-        type_(type),
-        name_(name),
-        default_value_(default_value)
-    {}
-
-
-    bool has_name() const {
-        return name_ != nullptr;
-    }
-
-
-    bool has_default_value() const {
-        return default_value_ != nullptr;
-    }
-
-
-    const MjToken &name() const {
-        return *name_;
-    }
-
-
-    const MjType &type() const {
-        return type_;
-    }
-
-
-    const MjExpression &default_value() const {
-        return *default_value_;
-    }
-
-
-    MjExpression &default_value() {
-        return *default_value_;
-    }
-
-
-    void set_default_value(MjExpression &expression) {
-        default_value_ = &expression;
-    }
-};
-
-
-using MjFunctionParameterList = Vector<MjFunctionParameter *>;
-
-
-/// @brief An `MjFunction` is an `MjStatement` object associated with a name and an `MjFunctionType`.
-class MjFunction {
+/// @brief A function is a named expression accepting arguments and returning a result.
+class MjFunction : public MjItem {
 private:
-    MjType *_type;
-    MjComment *_comment;
-    MjStatement *_body;
-    const MjToken *_name;
-    Slice<const MjToken> _tokens;
-    MjFunctionParameterList _parameter_list;
+    MjFunctionType *_type;
+    MjBlockStatement *_block_statement;
+    UnmanagedBox<u8> _data;
+
+    u16 _comment_offset;
+    u16 _template_offset;
+    u16 _name_offset;
+    u16 _template_argument_list_offset;
+    u16 _parameter_list_offset;
+    u16 _return_type_offset;
+
+    u16 _annotations_offset;
+    u8 _annotations_size;
 public:
 
 
     constexpr
-    MjFunction(Slice<const MjToken> tokens, const MjToken *name) noexcept :
-        _tokens(tokens),
-        _name(name)
+    MjFunction(const MjToken *name, Slice<const MjToken> tokens = nullptr) noexcept :
+        MjItem(MjItemKind::FUNCTION, tokens)
     {}
 
 
@@ -90,52 +38,101 @@ public:
     ///
 
 
-    // The comment associated with the variable
     constexpr
     bool has_comment() const noexcept {
-        return _comment != nullptr;
+        return _comment_offset > 0;
     }
 
 
-    // The comment associated with the variable
+    const MjComment &comment() const noexcept {
+        return *reinterpret_cast<const MjComment *>(&_data[_comment_offset]);
+    }
+
+
+    MjComment &comment() noexcept {
+        return *reinterpret_cast<MjComment *>(&_data[_comment_offset]);
+    }
+
+
+    constexpr
+    bool has_annotations() const noexcept {
+        return _annotations_size > 0;
+    }
+
+
+    Slice<MjAnnotation *const> annotations() const noexcept {
+        return {reinterpret_cast<MjAnnotation *const *>(&_data[_annotations_offset]), _annotations_size};
+    }
+
+
+    Slice<MjAnnotation *> annotations() noexcept {
+        return {reinterpret_cast<MjAnnotation **>(&_data[_annotations_offset]), _annotations_size};
+    }
+
+
     constexpr
     bool has_name() const noexcept {
-        return _name != nullptr;
+        return _name_offset != 0;
     }
 
 
-    // The comment associated with the variable
+    const MjToken *name() const noexcept {
+        return *reinterpret_cast<const MjToken *const *>(&_data[_name_offset]);
+    }
+
+
     constexpr
     bool is_anonymous() const noexcept {
-        return _name == nullptr;
+        return !has_name();
     }
 
 
-    // The comment associated with the variable
     constexpr
-    MjComment *comment() const noexcept {
-        return _comment;
+    bool is_template_specialization() const noexcept {
+        return _template_offset > 0;
     }
 
 
-    // The variable name
-    constexpr
-    const MjToken *name() const noexcept {
-        return _name;
+    MjFunctionTemplate *function_template() const noexcept {
+        return *reinterpret_cast<MjFunctionTemplate *const *>(&_data[_template_offset]);
     }
 
 
-    // The function type
-    constexpr
-    MjType *type() const noexcept {
-        return _type;
+    MjFunctionTemplate *function_template() noexcept {
+        return *reinterpret_cast<MjFunctionTemplate **>(&_data[_template_offset]);
     }
 
 
-    // The temporary sequence of tokens that make the definition
+
     constexpr
-    MjStatement *body() const noexcept {
-        return _body;
+    bool has_template_argument_list() const noexcept {
+        return _template_argument_list_offset > 0;
+    }
+
+
+    MjTemplateArgumentList *template_argument_list() const noexcept {
+        return *reinterpret_cast<MjTemplateArgumentList *const *>(&_data[_template_argument_list_offset]);
+    }
+
+
+    MjTemplateArgumentList *template_argument_list() noexcept {
+        return *reinterpret_cast<MjTemplateArgumentList **>(&_data[_template_argument_list_offset]);
+    }
+
+
+    MjFunctionParameterList *parameter_list() const noexcept {
+        return *reinterpret_cast<MjFunctionParameterList *const *>(&_data[_parameter_list_offset]);
+    }
+
+
+    MjFunctionParameterList *parameter_list() noexcept {
+        return *reinterpret_cast<MjFunctionParameterList **>(&_data[_parameter_list_offset]);
+    }
+
+
+    constexpr
+    bool has_return_type() const noexcept {
+        return _return_type_offset > 0;
     }
 
 
@@ -143,6 +140,18 @@ public:
     MjType *return_type() const noexcept {
         return _type ? _type->return_type() : nullptr;
     }
+
+
+    constexpr
+    MjBlockStatement *body() const noexcept {
+        return _block_statement;
+    }
+
+
+
+
+
+
 
 
     constexpr
@@ -163,47 +172,8 @@ public:
     }
 
 
-    constexpr
-    bool is_lambda() const noexcept {
-        return _type->is_lambda();
-    }
+    bool is_deterministic(const MjFunctionArgumentList &argument_list) const noexcept;
 
 
-    constexpr
-    bool is_operator() const noexcept {
-        return _type->is_operator();
-    }
-
-
-    constexpr
-    bool is_method() const noexcept {
-        return _type->is_method();
-    }
-
-
-    constexpr
-    bool is_deterministic(MjFunctionArgumentList *argument_list) const noexcept {
-        if () {
-            // deterministic for all arguments...
-            return true;
-        }
-
-        if (is_method()) {
-            return false;
-        }
-
-        for (MjFunctionArgument *argument : *argument_list) {
-            if (!argument->is_deterministic()) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-
-    constexpr
-    MjFunctionParameterList *function_parameter_list() const noexcept {
-        return _type->function_parameter_list();
-    }
+    bool supports_arguments(const MjFunctionArgumentList &argument_list) const noexcept;
 };

@@ -1,8 +1,11 @@
 #pragma once
 
-#include <mj/ast/MjToken.hpp>
+#include <mj/ast/MjFile.hpp>
 
-#include <std/File.hpp>
+#include <vector>
+#include <stack>
+#include <filesystem>
+#include <fstream>
 
 
 /// lexical errors (invalid tokens, unterminated string literals, invalid numbers, invalid identifiers, invalid operators)
@@ -16,10 +19,8 @@ private:
 public:
 
 
-    MjLexerError(
-        MjToken token,
-        StringView message
-    ) :
+    constexpr
+    MjLexerError(MjToken token, StringView message) noexcept :
         _token(token),
         _message(message)
     {}
@@ -33,11 +34,8 @@ private:
 public:
 
 
-    MjCompilerError(
-        StringView message
-    ) :
-        _message(message)
-    {}
+    constexpr
+    MjCompilerError(StringView message) noexcept : _message(message) {}
 };
 
 
@@ -47,11 +45,7 @@ private:
 public:
 
 
-    MjRuntimeError(
-        StringView message
-    ) :
-        _message(message)
-    {}
+    MjRuntimeError(StringView message) noexcept : _message(message) {}
 };
 
 
@@ -64,6 +58,43 @@ struct MjLexerPosition {
 };
 
 
+template<class MjLexerState>
+struct MjLexerStateValues {
+    static constexpr MjLexerState NONE{0};
+    static constexpr MjLexerState IN_ANNOTATION{5 << 1};
+    static constexpr MjLexerState IN_TYPE_EXPRESSION{6 << 1};
+    static constexpr MjLexerState IN_TYPE_CAST{7 << 1};
+    static constexpr MjLexerState IN_PARENTHESES{8 << 1};
+    static constexpr MjLexerState IN_SQUARE_BRACKETS{9 << 1};
+    static constexpr MjLexerState IN_ANGLE_BRACKETS{10 << 1};
+    static constexpr MjLexerState IN_CURLY_BRACES{11 << 1};
+    static constexpr MjLexerState IN_SUBSHELL{12 << 1};
+    static constexpr MjLexerState IN_SHELL{13 << 1};
+};
+
+
+struct MjLexerState : public Enum<u16>, public MjLexerStateValues<MjLexerState> {
+
+    constexpr
+    explicit
+    MjLexerState(u16 id) noexcept : Enum(id) {}
+
+
+    
+    constexpr bool in_annotation() const noexcept { return _id & IN_ANNOTATION; }
+    constexpr bool in_type_expression() const noexcept { return _id & IN_TYPE_EXPRESSION; }
+    constexpr bool in_type_cast() const noexcept { return _id & IN_TYPE_CAST; }
+    constexpr bool in_parentheses() const noexcept { return _id & IN_PARENTHESES; }
+    constexpr bool in_square_brackets() const noexcept { return _id & IN_SQUARE_BRACKETS; }
+    constexpr bool in_angle_brackets() const noexcept { return _id & IN_ANGLE_BRACKETS; }
+    constexpr bool in_curly_braces() const noexcept { return _id & IN_CURLY_BRACES; }
+    constexpr bool in_subshell() const noexcept { return _id & IN_SUBSHELL; }
+    constexpr bool in_shell() const noexcept { return _id & IN_SHELL; }
+};
+
+
+
+
 /// The MjLexer parses a Mjolnir source file into a stream of tokens.
 /// The parsing is done in two ways. First, non-identifier/non-number characters
 /// are combined and consolidated into tokens and emitted when a sequence is
@@ -71,133 +102,57 @@ struct MjLexerPosition {
 /// contexts by tracking state and indentation.
 class MjLexer {
 private:
-    File _file;
-    Vector<MjToken> _tokens;
-    StringView _line = nullptr;
+    MjFile &_file;
+    StringView _line;
     u32 _line_index = 0;
     u8 _line_indent = 0;
     u8 _last_indent = 0;
-    bool _emit_subtokens = false;
+    std::stack<MjLexerState> _states;
+    MjLexerState _state = MjLexerState::NONE;
+    bool _emit_subtokens;
+    bool _at_eof;
+    bool _has_leading_whitespace;
+    bool _has_trailing_whitespace;
+
+    static constexpr u32 INDENT_WIDTH = 4;
 public:
 
 
-    MjLexer(const Path &path) :
-        _file(path)
-    {}
+    static
+    MjFile *parse_file(std::filesystem::path path) noexcept;
 
 
-    void parse();
-
-
-    const Vector<MjToken> &tokens() const {
-        return _tokens;
-    }
-
-
-    StringView token_text(const MjToken &token) const {
-        return StringView(&_file[token.line][token.offset], token.size);
-    }
 private:
 
 
-    /// This is the main parsing function.
-    void parse_tokens();
-    void parse_tokens_fsm();
-    void parse_tokens_fsm2();
+
+    constexpr
+    MjLexer(MjFile &file, bool emit_subtokens = false) noexcept :
+        _file(file),
+        _emit_subtokens(emit_subtokens)
+    {}
 
 
     ///
-    /// Error Handling
-    ///
-
-
-    void error(StringView message) {
-        error(_tokens.back(), message);
-    }
-
-
-    void error(const MjToken &token, StringView message);
-
-
-    ///
-    /// Parse Context
-    ///
-
-
-    /// @brief Append a new token to the output buffer.
-    /// @param type 
-    /// @param size 
-    void append_token(MjTokenType type, u32 size);
-    void append_subtoken(MjTokenType type, u32 offset, u32 size);
-
-
-    /// @brief Save the Lexer state so that the current position can be restored if a subsequent parse operation fails.
-    MjLexerPosition save() {
-        return {
-            static_cast<u32>(_tokens.size()),
-            _line_index,
-            static_cast<u16>(_file[_line_index].size() - _line.size()),
-            _line_indent,
-            _last_indent
-        };
-    }
-
-
-    /// @brief Restore the lexer state from a previously saved position.
-    /// @param position The lexer position.
-    void restore(const MjLexerPosition &position) {
-        _tokens.resize(position.tokens_size);
-        _line = _file[position.line_index] + position.byte_offset;
-        _line_index = position.line_index;
-        _line_indent = position.indent;
-        _last_indent = position.last_indent;
-    }
-
-
-    ///
-    /// Parse Tokens
+    /// Internal Properties
     ///
 
 
     /// @brief Parse any token.
     /// @return The type of token was parsed.
-    MjTokenType parse_token(bool skip_trailing_whitespace = true);
-
-
-    /// @brief Parse the given text as an operator of the given token type.
-    /// @param text The text of the token.
-    /// @param token_type The type of the token.
-    /// @return true if the token was parsed successfully.
-    Error parse_token(StringView text, MjTokenType token_type, bool skip_trailing_whitespace = true);
-
-
-    /// @brief Parse the given text as an operator of the given token type. Operators must have
-    /// whitespace around them.
-    /// @param text The text of the token.
-    /// @param token_type The type of the token.
-    /// @return true if the token was parsed successfully.
-    Error parse_operator(StringView text, MjTokenType token_type, bool skip_trailing_whitespace = true);
-
-
-    /// @brief Parse the given text as an operator of the given token type. Words must not be
-    /// followed by more word characters or be a module name.
-    /// @param text The text of the token.
-    /// @param token_type The type of the token.
-    /// @return true if the token was parsed successfully.
-    Error parse_word(StringView text, MjTokenType token_type, bool skip_trailing_whitespace = true);
+    MjToken *token() noexcept {
+        return &_file.tokens().back();
+    }
 
 
     ///
-    /// Parse Context
+    /// Main parsing function
     ///
 
 
-    /// @brief Parse all whitespace characters. This should be called after each token is parsed to
-    /// make sure that the parser is looking at valid text. We call this after each token instead
-    /// of before each token because sometimes we have to test the whitespace preceding the current
-    /// token. This will also handle newlines and track indentation as needed for end of statement
-    /// detection.
-    void skip_whitespace();
+    /// This is the main parsing function.
+    Error parse() noexcept;
+
 
 
     ///
@@ -205,51 +160,37 @@ private:
     ///
 
 
-    /// Parse an identifier. Either a keyword, function, type, constant, module, literal, or variable.
-    /// @return true if the element was parsed successfully.
-    Error parse_identifier();
-
-    Error parse_type_qualifier();
-    Error parse_type_name();
-    Error parse_variable_name();
+    Error parse_shell_option() noexcept;
 
 
-    /// @return true if the element was parsed successfully.
-    Error parse_import_statement();
-
-
-    /// Attempt to parse the next token as either a raw or an interpolated string.
-    ///
-    /// NOTE: Tokens are not emitted for escaped character sequences.
-    /// @return true if the element was parsed successfully.
-    Error parse_string_literal();
-    Error parse_raw_string_literal();
-    Error parse_interpolated_string_literal();
-    Error parse_numeric_literal();
-
-
-    /// @return true if the element was parsed successfully.
-    Error parse_operator();
-
-
-    /// Parse an expression.
-    ///
-    /// @return true if the element was parsed successfully.
-    Error parse_expression();
+    Error parse_shell_token() noexcept;
 
 
     /// Parse a type expression.
     ///
-    /// A type expression begins with either a type name or a CV-qualifier and is followed by zero or more type qualifiers.
-    /// @return true if the element was parsed successfully.
-    Error parse_type_expression();
+    /// A type expression begins with either a type name or a CV-qualifier and is followed by zero
+    /// or more type qualifiers.
+    Error parse_type_expression() noexcept;
+
+
+    /// Parse an identifier. Either a keyword, function, type, constant, module, literal, or variable.
+    Error parse_identifier() noexcept;
+
+
+    /// Attempt to parse the next token as either a raw or an interpolated string.
+    Error parse_raw_string_literal() noexcept;
+
+
+    /// Parse an interpolated string literal.
+    Error parse_interpolated_string_literal() noexcept;
+
+
+    /// Parse a numeric literal.
+    Error parse_numeric_literal() noexcept;
 
 
     /// Parse a unit expression.
-    ///
-    /// [A-Za-zµΩÅ°'"]|\^g|1/)[A-Za-z0-9⁰¹²³⁴⁵⁶⁷⁸⁹⁻⸍µΩÅ°'"·^*/-]*
-    /// @return true if the element was parsed successfully.
-    Error parse_unit_expression();
+    Error parse_unit_expression() noexcept;
 
 
     ///
@@ -257,98 +198,157 @@ private:
     ///
 
 
-    /// @brief Parse a template parameter list.
-    /// <type Type [= Type], Type [var [= expr]], ...>
-    /// @return true if the element was parsed successfully.
-    Error parse_template_parameter_list();
+    ///
+    /// Token Parsing
+    ///
 
 
-    /// @brief Parse a template argument list.
-    /// <Type, expr, ...>
-    /// @return true if the element was parsed successfully.
-    Error parse_template_argument_list();
+    /// @brief Parse any token.
+    /// @return The type of token was parsed.
+    Error parse_token(MjTokenKind token_kind) noexcept;
 
 
-    /// @brief Parse a function parameter list.
-    /// (Type [var [= expr]], ...)
-    /// @return true if the element was parsed successfully.
-    Error parse_function_parameter_list();
+    Error parse_token() noexcept;
+    Error parse_binary_operator() noexcept;
 
 
-    /// @brief Parse a function argument list.
-    /// (expr, ...)
-    /// @return true if the element was parsed successfully.
-    Error parse_function_argument_list();
+    /// @brief Parse the given text as an operator of the given token type.
+    /// @param text The text of the token.
+    /// @param token_kind The type of the token.
+    /// @return true if the token was parsed successfully.
+    Error parse_token(StringView text, MjTokenKind token_kind, bool skip_trailing_whitespace = true) noexcept;
 
 
-    /// @brief Parse a parenthesis expression.
-    /// (expr)
-    /// @return true if the element was parsed successfully.
-    Error parse_parenthesis_expression();
+    /// @brief Parse the given text as an operator of the given token type. Operators must have
+    /// whitespace around them.
+    /// @param text The text of the token.
+    /// @param token_kind The type of the token.
+    /// @return true if the token was parsed successfully.
+    Error parse_operator(StringView text, MjTokenKind token_kind, bool skip_trailing_whitespace = true) noexcept;
 
 
-    /// @brief Parse a type cast expression.
-    /// (Type: expr)
-    /// @return true if the element was parsed successfully.
-    Error parse_type_cast_expression();
+    /// @brief Parse the given text as an operator of the given token type. Words must not be
+    /// followed by more word characters or be a module name.
+    /// @param text The text of the token.
+    /// @param token_kind The type of the token.
+    /// @return true if the token was parsed successfully.
+    Error parse_word(StringView text, MjTokenKind token_kind, bool skip_trailing_whitespace = true) noexcept;
+
+
+    ///
+    /// Text Parsing
+    ///
+
+
+    Error parse_text(StringView string, MjTokenKind token_kind) noexcept;
+
+
+    Error parse_text(u8 ch, MjTokenKind token_kind) noexcept;
+
+
+    /// @brief Parse a token of the given kind with the given size.
+    void parse_text(MjTokenKind kind, u32 size = 1) noexcept;
+
+
+    void append_token(MjToken token) noexcept;
+
+
+    /// @brief Parse a sub-token of the given kind at the given offset and size within the preceding
+    /// token.
+    void append_subtoken(MjTokenKind kind, u32 offset, u32 size = 1) noexcept;
+
+
+    Error peek_text(StringView string) const noexcept {
+        if (!_line.starts_with(string)) {
+            return Error::FAILURE;
+        }
+
+        return Error::SUCCESS;
+    }
+
+
+    Error peek_text(u8 ch) const noexcept {
+        if (!_line.starts_with(ch)) {
+            return Error::FAILURE;
+        }
+
+        return Error::SUCCESS;
+    }
+
+
+    ///
+    /// Line Control and Whitespace Parsing
+    ///
+
+
+    /// @brief Skip all leading whitespace characters, moving to the next non-empty line.
+    void skip_whitespace() noexcept;
+
+
+    /// @brief Parse the indentation of the current line, skipping empty lines.
+    void parse_indent() noexcept;
+
+
+    /// @brief Move the parser to the next line.
+    void move_to_next_line() noexcept;
+
+
+    ///
+    /// State Control
+    ///
+
+
+    void clear_state(MjLexerState state) noexcept {
+        _state &= ~state;
+        _states.push(state);
+    }
+
+
+    void push_state(MjLexerState state) noexcept {
+        //_state |= state;
+        _states.push(state);
+    }
+
+
+    void pop_state() noexcept {
+        _state = _states.top();
+        _states.pop();
+    }
+
+
+
+    /// @brief Save the Lexer state so that the current position can be restored if a subsequent parse operation fails.
+    //MjLexerPosition save() noexcept {
+    //    return {
+    //        static_cast<u32>(_file.tokens().size()),
+    //        _line_index,
+    //        static_cast<u16>(_file.line(_line_index).size() - _line.size()),
+    //        _line_indent,
+    //        _last_indent
+    //    };
+    //}
+
+
+    /// @brief Restore the lexer state from a previously saved position.
+    /// @param position The lexer position.
+    //void restore(const MjLexerPosition &position) noexcept {
+    //    _file.tokens().resize(position.tokens_size);
+    //    _line = _file.line(position.line_index) + position.byte_offset;
+    //    _line_index = position.line_index;
+    //    _line_indent = position.indent;
+    //    _last_indent = position.last_indent;
+    //}
+
+
+    ///
+    /// Error Handling
+    ///
+
+
+    void error(const MjToken &token, StringView message) noexcept;
+
+
+    void error(StringView message) noexcept {
+        error(*token(), message);
+    }
 };
-
-
-
-// Parser stuff
-/*
-    void error(MjToken token, StringView message) {
-        printf("%s:%u:%u: \x1B[31merror:\x1B[m ",
-            _file.path().c_str(), token.line, token.offset
-        );
-        printf("%.*s\n", message.size(), message.data());
-        printf("\x1B[35m%*.*s\x1B[m",
-            token.offset, token.size, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-        );
-    }
-
-
-    const MjToken &next();
-
-
-    const MjToken *peek() const {
-        return _tokens.back();
-    }
-
-
-    const MjToken *next_if_any(MjTokenType type) {
-        return _token->type == type ? &next() : nullptr;
-    }
-
-
-    Error next_if(const MjToken &token) {
-        return *this->_token == token ? &next() : nullptr;
-    }
-
-
-    void expect(const MjToken &token) {
-        if (next() != token) {
-            printf("%s:%u:%u: Expected: '%.*s'\n",
-                _file.path().c_str(), _token.line, _token.offset, _token.size, &_file[_token.line][_token.offset]
-            );
-        }
-    }
-
-
-    const MjToken *expect_any(MjTokenType type) {
-        if (next().type != type) {
-            printf("%s:%u:%u: Expected: '%.*s'\n",
-                _file.path().c_str(), _token.line, _token.offset, _token.size, MjTokenType_name(type).size(), MjTokenType_name(type).data()
-            );
-        }
-
-        return _token;
-    }
-
-
-    /// @brief Return true if the token is the first in the line.
-    /// This is used for tracking indentation as a parsing hint for handling errors.
-    Error next_is_first() {
-        return false;
-    }
-*/

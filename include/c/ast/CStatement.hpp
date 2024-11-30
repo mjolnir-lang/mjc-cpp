@@ -33,13 +33,13 @@ public:
 };
 
 
-#include <c/ast/statement/CBlockStatement.hpp>
-#include <c/ast/statement/CBreakStatement.hpp>
-#include <c/ast/statement/CContinueStatement.hpp>
-#include <c/ast/statement/CDoWhileStatement.hpp>
-#include <c/ast/statement/CForStatement.hpp>
-#include <c/ast/statement/CGotoStatement.hpp>
-#include <c/ast/statement/CIfStatement.hpp>
-#include <c/ast/statement/CSwitchStatement.hpp>
-#include <c/ast/statement/CReturnStatement.hpp>
-#include <c/ast/statement/CWhileStatement.hpp>
+#include <c/ast/CBlockStatement.hpp>
+#include <c/ast/CBreakStatement.hpp>
+#include <c/ast/CContinueStatement.hpp>
+#include <c/ast/CDoWhileStatement.hpp>
+#include <c/ast/CForStatement.hpp>
+#include <c/ast/CGotoStatement.hpp>
+#include <c/ast/CIfStatement.hpp>
+#include <c/ast/CSwitchStatement.hpp>
+#include <c/ast/CReturnStatement.hpp>
+#include <c/ast/CWhileStatement.hpp>

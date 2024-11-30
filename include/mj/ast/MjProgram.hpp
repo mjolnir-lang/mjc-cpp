@@ -1,7 +1,6 @@
 #pragma once
 
 #include <mj/ast/MjModule.hpp>
-#include <mj/ast/MjFunction.hpp>
 
 
 /// @brief A Program is an executable without a platform.
@@ -14,7 +13,7 @@ private:
 public:
 
 
-    void export_source(const Path &path) {
+    void export_source(const FilePath &file_path) noexcept {
 
         // Write module dependencies.
         //for (MjModule &mod : scope.modules) {

@@ -1,49 +1,41 @@
 #pragma once
 
-#include <std/Memory.hpp>
+#include <core/Common.hpp>
 
 
-/// An `MjStorage` object is a memory backing for compile time emulation and execution as well as for storing raw data.
-/// It provides methods for detecting overlap and modification or exclusive access to data. This allows assumptions to be
-/// made about the data.
+/// An `MjStorage` object is a memory backing for compile time emulation and execution as well as
+/// for storing raw data. It provides methods for detecting overlap and modification or exclusive
+/// access to data. This allows assumptions to be made about the data.
 class MjStorage {
 private:
-    MjStorage *owner; // If non-null, the storage is managed by the other storage object
-    u8 *data_;      // The storage data
+    u64 _address;
+    u32 _offset;
+    bool _is_volatile;
+    bool _is_aliased;
+    bool _is_relative;
+    bool _is_owned;
 public:
 
 
-    MjStorage(
-        u32 size
-     ) {
-        u8 *ptr;
-        Memory::allocate<u8>(ptr, size);
-        data_ = ptr;
+    MjStorage(u32 size) noexcept {}
+
+
+    MjStorage(MjStorage &owner, u32 offset) noexcept {}
+
+
+    bool is_owned() const noexcept {
+        return _is_owned;
     }
 
 
-    MjStorage(
-        MjStorage &owner,
-        u32 offset
-    ) :
-        data_(owner.data<u8>() + offset)
-    {}
-
-
-    ~MjStorage() {
-        if (!owner) {
-            Memory::free(data_);
-        }
+    // Return the object address.
+    u32 address() const noexcept {
+        return _address;
     }
 
 
-    template<class T>
-    T *data() {
-        return data_;
-    }
-
-
-    bool is_owned() const {
-        return owner;
+    // Return the object offset.
+    u32 offset() const noexcept {
+        return _offset;
     }
 };

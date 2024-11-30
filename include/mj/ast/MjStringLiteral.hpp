@@ -1,18 +1,24 @@
 #pragma once
 
-#include <mj/ast/MjType.hpp>
-#include <std/String.hpp>
+#include <mj/ast/MjExpression.hpp>
+#include <core/String.hpp>
 
 
-class MjStringLiteral {
+class MjStringLiteral : public MjExpression {
 private:
-    String _value;
-    const MjToken *_definition;
+    StringView _value;
 public:
 
 
+    ///
+    /// Constructors
+    ///
+
+
     constexpr
-    MjStringLiteral(const MjToken *definition, String &&value) noexcept : _value(std::move(value)), _definition(definition) {}
+    MjStringLiteral(StringView value, Slice<const MjToken> tokens = nullptr) noexcept :
+        MjExpression(tokens), _value(value)
+    {}
 
 
     ///
@@ -20,9 +26,13 @@ public:
     ///
 
 
-    constexpr
-    MjType *type() const noexcept {
-        return nullptr;
+    bool is_deterministic() const noexcept final {
+        return true;
+    }
+
+
+    const MjType *result_type() const noexcept final {
+        return MjTypePool::get("string_literal");
     }
 
 

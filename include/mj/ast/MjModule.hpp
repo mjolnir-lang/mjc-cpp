@@ -1,67 +1,138 @@
 #pragma once
 
-#include <mj/ast/MjScope.hpp>
-#include <std/File.hpp>
+#include <mj/ast/MjType.hpp>
+#include <mj/ast/MjTemplate.hpp>
+#include <mj/ast/MjFunction.hpp>
+#include <filesystem/File.hpp>
 
 
-// Modules participate in the module dependency graph for compilation order.
-// They are built from source files and object files.
-// Modules also declare their platform requirements.
+/// Modules participate in the module dependency graph for compilation order.
+/// They are built from source files and object files.
+/// Modules also declare their platform requirements.
 class MjModule {
 private:
-    const MjToken &name_;
-    MjModule *parent_;              // The parent scope
-    Vector<MjModule *> modules_;      // Used to keep track of which modules have been imported
-    Vector<MjType *> basic_types_;     // Defined types
-    Vector<MjTemplate *> templates_;  // Defined templates (generic types)
-    Vector<MjFunction *> functions_;  // The free functions
-    Vector<MjFunction *> operators_;  // The operator overloads
+    FilePath _directory_path;
+    StringView _name;                // The name
+    MjModule *_parent;               // The parent
+    Vector<MjModule *> _imports;     // Imported modules
+    Vector<MjModule *> _modules;     // Submodules
+    Vector<MjType *> _types;         // Defined types
+    Vector<MjTemplate *> _templates; // Defined templates (generic types)
+    Vector<MjFunction *> _functions; // Defined functions
 public:
 
 
-    MjModule(
-        const MjToken &name
-    ) :
-        name_(name)
-    {}
+    ///
+    /// Constructors
+    ///
 
 
-    const MjToken &name() const {
-        return name_;
+    MjModule(StringView name, MjModule *parent = nullptr) noexcept :
+        _name(name), _parent(parent)
+    {
+        if (_parent == nullptr) {
+            _directory_path = FilePath(name);
+        } else {
+            _directory_path = _parent->directory_path();
+            _directory_path.append(name);
+        }
+    }
+
+
+    ///
+    /// Properties
+    ///
+
+
+    constexpr
+    const FilePath &directory_path() const noexcept {
+        return _directory_path;
+    }
+
+
+    constexpr
+    bool has_parent() const noexcept {
+        return _parent != nullptr;
+    }
+
+
+    constexpr
+    const MjModule *parent() const noexcept {
+        return _parent;
+    }
+
+
+    constexpr
+    MjModule *parent() noexcept {
+        return _parent;
+    }
+
+
+    constexpr
+    StringView name() const noexcept {
+        return _name;
     }
 
 
     /// @brief Return the list of member variables defined by the type.
-    const Vector<MjModule *> &modules() const {
-        return modules_;
+    constexpr
+    const Vector<MjModule *> &modules() const noexcept {
+        return _modules;
     }
 
 
     /// @brief Return the list of member variables defined by the type.
-    const Vector<MjType *> &basic_types() const {
-        return basic_types_;
+    constexpr
+    Vector<MjModule *> &modules() noexcept {
+        return _modules;
+    }
+
+
+    /// @brief Return the list of member variables defined by the type.
+    constexpr
+    const Vector<MjType *> &types() const noexcept {
+        return _types;
+    }
+
+
+    /// @brief Return the list of member variables defined by the type.
+    constexpr
+    Vector<MjType *> &types() noexcept {
+        return _types;
     }
 
 
     /// @brief Return the list of methods defined by the type.
-    const Vector<MjFunction *> &functions() const {
-        return functions_;
+    constexpr
+    const Vector<MjFunction *> &functions() const noexcept {
+        return _functions;
+    }
+
+
+    /// @brief Return the list of methods defined by the type.
+    constexpr
+    Vector<MjFunction *> &functions() noexcept {
+        return _functions;
     }
 
 
     /// @brief Return the list of operators defined by the type.
-    const Vector<MjTemplate *> &templates() const {
-        return templates_;
+    constexpr
+    const Vector<MjTemplate *> &templates() const noexcept {
+        return _templates;
     }
 
 
     /// @brief Return the list of operators defined by the type.
-    const Vector<MjFunction *> &operators() const {
-        return operators_;
+    constexpr
+    Vector<MjTemplate *> &templates() noexcept {
+        return _templates;
     }
 
 
-    const MjScope &shared() const {
-        ;
-    }
+    ///
+    /// Methods
+    ///
+
+
 };

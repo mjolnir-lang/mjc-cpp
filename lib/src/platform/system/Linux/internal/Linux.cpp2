@@ -1,0 +1,2549 @@
+#include <platform/system/Linux>
+#include <system/logger/Logger.hpp>
+
+#define _GNU_SOURCE
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/aio_abi.h>
+#include <linux/bpf.h>
+//#include <numaif.h>
+#include <poll.h>
+//#include <stddef.h>
+#include <stdio.h>
+//#include <stdlib.h>
+#include <sys/syscall.h>
+#include <sys/epoll.h>
+#include <sys/mman.h>
+#include <sys/select.h>
+//#include <sys/sem.h>
+#include <sys/sendfile.h>
+#include <sys/shm.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+//#include <sys/types.h>
+#include <sys/uio.h>
+#include <sys/xattr.h>
+#include <unistd.h>
+
+
+
+///
+/// File System (File Operations)
+///
+
+
+Error platform::system::Linux::close(FileDescriptor file_descriptor) {
+    if (::close(file_descriptor)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EINTR:
+            lib_error("platform::system::Linux", "The close() call was interrupted by a signal!");
+            break;
+        case EIO:
+            lib_error("platform::system::Linux", "An I/O error occurred!");
+            break;
+        case ENOSPC:
+        case EDQUOT:
+            lib_error("platform::system::Linux", "On NFS, these errors are not normally reported against the first write which exceeds the available storage space, but instead against a subsequent write(), fsync(), or close()!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error platform::system::Linux::creat(const FilePath &path, u32 mode) {
+    if (::creat(path, mode)) {
+        switch (errno) {
+        case EACCES:
+            if (mode & O_CREAT) {
+                lib_error("platform::system::Linux", "Where O_CREAT is specified, the protected_fifos or protected_regular sysctl is enabled, the file already exists and is a FIFO or regular file, the owner of the file is neither the current user nor the owner of the containing directory, and the containing directory is both world- or group-writable and sticky.  For details, see the descriptions of /proc/sys/fs/protected_fifos and /proc/sys/fs/protected_regular in proc()!");
+            } else {
+                lib_error("platform::system::Linux", "The requested access to the file is not allowed, or search permission is denied for one of the directories in the path prefix of pathname, or the file did not exist yet and write access to the parent directory is not allowed.");
+            }
+
+            break;
+        case EBUSY:
+            lib_error("platform::system::Linux", "O_EXCL was specified in flags and pathname refers to a block device that is in use by the system (e.g., it is mounted)!");
+            break;
+        case EDQUOT:
+            lib_bug("platform::system::Linux", "Where O_CREAT is specified, the file does not exist, and the user's quota of disk blocks or inodes on the filesystem has been exhausted!");
+            break;
+        case EEXIST:
+            lib_bug("platform::system::Linux", "pathname already exists and O_CREAT and O_EXCL were used!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "pathname points outside your accessible address space!");
+            break;
+        case EFBIG:
+            lib_bug("platform::system::Linux", "See EOVERFLOW!");
+            break;
+        case EINTR:
+            lib_bug("platform::system::Linux", "While blocked waiting to complete an open of a slow device (e.g., a FIFO; see fifo()), the call was interrupted by a signal handler; see signal()!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "The filesystem does not support the O_DIRECT flag!");
+            lib_bug("platform::system::Linux", "Invalid value in flags!");
+            lib_bug("platform::system::Linux", "O_TMPFILE was specified in flags, but neither O_WRONLY nor O_RDWR was specified!");
+            lib_bug("platform::system::Linux", "O_CREAT was specified in flags and the final component (\"basename\") of the new file's pathname is invalid (e.g., it contains characters not permitted by the underlying filesystem)!");
+            lib_bug("platform::system::Linux", "The final component (\"basename\") of pathname is invalid (e.g., it contains characters not permitted by the underlying filesystem)!");
+            break;
+        case EISDIR:
+            lib_bug("platform::system::Linux", "pathname refers to a directory and the access requested involved writing (that is, O_WRONLY or O_RDWR is set)!");
+            lib_bug("platform::system::Linux", "pathname refers to an existing directory, O_TMPFILE and one of O_WRONLY or O_RDWR were specified in flags, but this kernel version does not provide the O_TMPFILE functionality!");
+            break;
+        case ELOOP:
+            lib_bug("platform::system::Linux", "Too many symbolic links were encountered in resolving pathname!");
+            lib_bug("platform::system::Linux", "pathname was a symbolic link, and flags specified O_NOFOLLOW but not O_PATH!");
+            break;
+        case EMFILE:
+            lib_bug("platform::system::Linux", "The per-process limit on the number of open file descriptors has been reached (see the description of RLIMIT_NOFILE in getrlimit(2))!");
+            break;
+        case ENAMETOOLONG:
+            lib_bug("platform::system::Linux", "pathname was too long!");
+            break;
+        case ENFILE:
+            lib_bug("platform::system::Linux", "The system-wide limit on the total number of open files has been reached!");
+            break;
+        case ENODEV:
+            lib_bug("platform::system::Linux", "pathname refers to a device special file and no corresponding device exists.  (This is a Linux kernel bug; in this situation ENXIO must be returned.!");
+            break;
+        case ENOENT:
+            lib_bug("platform::system::Linux", "O_CREAT is not set and the named file does not exist!");
+            lib_bug("platform::system::Linux", "A directory component in pathname does not exist or is a dangling symbolic link!");
+            lib_bug("platform::system::Linux", "pathname refers to a nonexistent directory, O_TMPFILE and one of O_WRONLY or O_RDWR were specified in flags, but this kernel version does not provide the O_TMPFILE functionality!");
+            break;
+        case ENOMEM:
+            lib_bug("platform::system::Linux", "The named file is a FIFO, but memory for the FIFO buffer can't be allocated because the per-user hard limit on memory allocation for pipes has been reached and the caller is not privileged; see pipe(7)!");
+            lib_bug("platform::system::Linux", "Insufficient kernel memory was available!");
+            break;
+        case ENOSPC:
+            lib_bug("platform::system::Linux", "pathname was to be created but the device containing pathname has no room for the new file!");
+            break;
+        case ENOTDIR:
+            lib_bug("platform::system::Linux", "A component used as a directory in pathname is not, in fact, a directory, or O_DIRECTORY was specified and pathname was not a directory!");
+            break;
+        case ENXIO:
+            lib_bug("platform::system::Linux", "O_NONBLOCK | O_WRONLY is set, the named file is a FIFO, and no process has the FIFO open for reading!");
+            lib_bug("platform::system::Linux", "The file is a device special file and no corresponding device exists!");
+            lib_bug("platform::system::Linux", "The file is a UNIX domain socket!");
+            break;
+        case EOPNOTSUPP:
+            lib_bug("platform::system::Linux", "The filesystem containing pathname does not support O_TMPFILE!");
+            break;
+        case EOVERFLOW:
+            lib_bug("platform::system::Linux", "pathname refers to a regular file that is too large to be opened!");
+            break;
+        case EPERM:
+            lib_bug("platform::system::Linux", "The O_NOATIME flag was specified, but the effective user ID of the caller did not match the owner of the file and the caller was not privileged!");
+            lib_bug("platform::system::Linux", "The operation was prevented by a file seal; see fcntl(2)!");
+            break;
+        case EROFS:
+            lib_bug("platform::system::Linux", "pathname refers to a file on a read-only filesystem and write access was requested!");
+            break;
+        case ETXTBSY:
+            lib_bug("platform::system::Linux", "pathname refers to an executable image which is currently being executed and write access was requested!");
+            lib_bug("platform::system::Linux", "pathname refers to a file that is currently in use as a swap file, and the O_TRUNC flag was specified!");
+            lib_bug("platform::system::Linux", "pathname refers to a file that is currently being read by the kernel (e.g., for module/firmware loading), and write access was requested!");
+            break;
+        case EWOULDBLOCK:
+            lib_bug("platform::system::Linux", "The O_NONBLOCK flag was specified, and an incompatible lease was held on the file (see fcntl(2))!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error open(const FilePath &path, u32 flags, u32 mode) {
+    if (::open(path, flags, mode)) {
+        switch (errno) {
+        case EACCES:
+            if ( & O_CREAT) {
+                lib_error("platform::system::Linux", "Where O_CREAT is specified, the protected_fifos or protected_regular sysctl is enabled, the file already exists and is a FIFO or regular file, the owner of the file is neither the current user nor the owner of the containing directory, and the containing directory is both world- or group-writable and sticky.  For details, see the descriptions of /proc/sys/fs/protected_fifos and /proc/sys/fs/protected_regular in proc()!");
+            } else {
+                lib_error("platform::system::Linux", "The requested access to the file is not allowed, or search permission is denied for one of the directories in the path prefix of pathname, or the file did not exist yet and write access to the parent directory is not allowed.");
+            }
+
+            break;
+        case EBUSY:
+            lib_error("platform::system::Linux", "O_EXCL was specified in flags and pathname refers to a block device that is in use by the system!");
+            break;
+        case EDQUOT:
+            lib_bug("platform::system::Linux", "Where O_CREAT is specified, the file does not exist, and the user's quota of disk blocks or inodes on the filesystem has been exhausted!");
+            break;
+        case EEXIST:
+            lib_bug("platform::system::Linux", "pathname already exists and O_CREAT and O_EXCL were used!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "pathname points outside your accessible address space!");
+            break;
+        case EFBIG:
+            lib_bug("platform::system::Linux", "See EOVERFLOW!");
+            break;
+        case EINTR:
+            lib_bug("platform::system::Linux", "While blocked waiting to complete an open of a slow device, the call was interrupted by a signal handler!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "The filesystem does not support the O_DIRECT flag!");
+            lib_bug("platform::system::Linux", "Invalid value in flags!");
+            lib_bug("platform::system::Linux", "O_TMPFILE was specified in flags, but neither O_WRONLY nor O_RDWR was specified!");
+            lib_bug("platform::system::Linux", "O_CREAT was specified in flags and the final component (\"basename\") of the new file's pathname is invalid (e.g., it contains characters not permitted by the underlying filesystem)!");
+            lib_bug("platform::system::Linux", "The final component (\"basename\") of pathname is invalid (e.g., it contains characters not permitted by the underlying filesystem)!");
+            break;
+        case EISDIR:
+            lib_bug("platform::system::Linux", "pathname refers to a directory and the access requested involved writing (that is, O_WRONLY or O_RDWR is set)!");
+            lib_bug("platform::system::Linux", "pathname refers to an existing directory, O_TMPFILE and one of O_WRONLY or O_RDWR were specified in flags, but this kernel version does not provide the O_TMPFILE functionality!");
+            break;
+        case ELOOP:
+            lib_bug("platform::system::Linux", "Too many symbolic links were encountered in resolving pathname!");
+            lib_bug("platform::system::Linux", "pathname was a symbolic link, and flags specified O_NOFOLLOW but not O_PATH!");
+            break;
+        case EMFILE:
+            lib_bug("platform::system::Linux", "The per-process limit on the number of open file descriptors has been reached!");
+            break;
+        case ENAMETOOLONG:
+            lib_bug("platform::system::Linux", "pathname was too long!");
+            break;
+        case ENFILE:
+            lib_bug("platform::system::Linux", "The system-wide limit on the total number of open files has been reached!");
+            break;
+        case ENODEV:
+            lib_bug("platform::system::Linux", "pathname refers to a device special file and no corresponding device exists!");
+            break;
+        case ENOENT:
+            lib_bug("platform::system::Linux", "O_CREAT is not set and the named file does not exist!");
+            lib_bug("platform::system::Linux", "A directory component in pathname does not exist or is a dangling symbolic link!");
+            lib_bug("platform::system::Linux", "pathname refers to a nonexistent directory, O_TMPFILE and one of O_WRONLY or O_RDWR were specified in flags, but this kernel version does not provide the O_TMPFILE functionality!");
+            break;
+        case ENOMEM:
+            lib_bug("platform::system::Linux", "The named file is a FIFO, but memory for the FIFO buffer can't be allocated because the per-user hard limit on memory allocation for pipes has been reached and the caller is not privileged!");
+            lib_bug("platform::system::Linux", "Insufficient kernel memory was available!");
+            break;
+        case ENOSPC:
+            lib_bug("platform::system::Linux", "pathname was to be created but the device containing pathname has no room for the new file!");
+            break;
+        case ENOTDIR:
+            lib_bug("platform::system::Linux", "A component used as a directory in pathname is not, in fact, a directory, or O_DIRECTORY was specified and pathname was not a directory!");
+            break;
+        case ENXIO:
+            lib_bug("platform::system::Linux", "O_NONBLOCK | O_WRONLY is set, the named file is a FIFO, and no process has the FIFO open for reading!");
+            lib_bug("platform::system::Linux", "The file is a device special file and no corresponding device exists!");
+            lib_bug("platform::system::Linux", "The file is a UNIX domain socket!");
+            break;
+        case EOPNOTSUPP:
+            lib_error("platform::system::Linux", "The filesystem containing pathname does not support O_TMPFILE!");
+            break;
+        case EOVERFLOW:
+            lib_error("platform::system::Linux", "pathname refers to a regular file that is too large to be opened!");
+            break;
+        case EPERM:
+            lib_bug("platform::system::Linux", "The O_NOATIME flag was specified, but the effective user ID of the caller did not match the owner of the file and the caller was not privileged!");
+            lib_bug("platform::system::Linux", "The operation was prevented by a file seal; see fcntl()!");
+            break;
+        case EROFS:
+            lib_bug("platform::system::Linux", "pathname refers to a file on a read-only filesystem and write access was requested!");
+            break;
+        case ETXTBSY:
+            lib_bug("platform::system::Linux", "pathname refers to an executable image which is currently being executed and write access was requested!");
+            lib_bug("platform::system::Linux", "pathname refers to a file that is currently in use as a swap file, and the O_TRUNC flag was specified!");
+            lib_bug("platform::system::Linux", "pathname refers to a file that is currently being read by the kernel (e.g., for module/firmware loading), and write access was requested!");
+            break;
+        case EWOULDBLOCK:
+            lib_bug("platform::system::Linux", "The O_NONBLOCK flag was specified, and an incompatible lease was held on the file (see fcntl(2))!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error openat(FileDescriptor dirfd, const char *path, u32 flags, u32 mode) {
+    if (::openat(dirfd, path, flags, mode)) {
+        switch (errno) {
+        case EACCES:
+            if (flags & O_CREAT) {
+                lib_error("platform::system::Linux", "The protected_fifos or protected_regular sysctl is enabled, the file already exists and is a FIFO or regular file, the owner of the file is neither the current user nor the owner of the containing directory, and the containing directory is both world- or group-writable and sticky.  For details, see the descriptions of /proc/sys/fs/protected_fifos and /proc/sys/fs/protected_regular in proc()!");
+            } else {
+                lib_error("platform::system::Linux", "The requested access to the file is not allowed, or search permission is denied for one of the directories in the path prefix of pathname, or the file did not exist yet and write access to the parent directory is not allowed.");
+            }
+
+            break;
+        case EBADF:
+            lib_error("platform::system::Linux", "openat()) pathname is relative but dirfd is neither AT_FDCWD nor a valid file descriptor!");
+            break;
+        case EBUSY:
+            lib_error("platform::system::Linux", "O_EXCL was specified in flags and pathname refers to a block device that is in use by the system (e.g., it is mounted)!");
+            break;
+        case EDQUOT:
+            lib_bug("platform::system::Linux", "Where O_CREAT is specified, the file does not exist, and the user's quota of disk blocks or inodes on the filesystem has been exhausted!");
+            break;
+        case EEXIST:
+            lib_bug("platform::system::Linux", "pathname already exists and O_CREAT and O_EXCL were used!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "pathname points outside your accessible address space!");
+            break;
+        case EFBIG:
+            lib_bug("platform::system::Linux", "See EOVERFLOW!");
+            break;
+        case EINTR:
+            lib_bug("platform::system::Linux", "While blocked waiting to complete an open of a slow device (e.g., a FIFO; see fifo()), the call was interrupted by a signal handler; see signal()!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "The filesystem does not support the O_DIRECT flag!");
+            lib_bug("platform::system::Linux", "Invalid value in flags!");
+            lib_bug("platform::system::Linux", "O_TMPFILE was specified in flags, but neither O_WRONLY nor O_RDWR was specified!");
+            lib_bug("platform::system::Linux", "O_CREAT was specified in flags and the final component (\"basename\") of the new file's pathname is invalid (e.g., it contains characters not permitted by the underlying filesystem)!");
+            lib_bug("platform::system::Linux", "The final component (\"basename\") of pathname is invalid (e.g., it contains characters not permitted by the underlying filesystem)!");
+            break;
+        case EISDIR:
+            lib_bug("platform::system::Linux", "pathname refers to a directory and the access requested involved writing (that is, O_WRONLY or O_RDWR is set)!");
+            lib_bug("platform::system::Linux", "pathname refers to an existing directory, O_TMPFILE and one of O_WRONLY or O_RDWR were specified in flags, but this kernel version does not provide the O_TMPFILE functionality!");
+            break;
+        case ELOOP:
+            lib_bug("platform::system::Linux", "Too many symbolic links were encountered in resolving pathname!");
+            lib_bug("platform::system::Linux", "pathname was a symbolic link, and flags specified O_NOFOLLOW but not O_PATH!");
+            break;
+        case EMFILE:
+            lib_bug("platform::system::Linux", "The per-process limit on the number of open file descriptors has been reached (see the description of RLIMIT_NOFILE in getrlimit(2))!");
+            break;
+        case ENAMETOOLONG:
+            lib_bug("platform::system::Linux", "pathname was too long!");
+            break;
+        case ENFILE:
+            lib_bug("platform::system::Linux", "The system-wide limit on the total number of open files has been reached!");
+            break;
+        case ENODEV:
+            lib_bug("platform::system::Linux", "pathname refers to a device special file and no corresponding device exists.  (This is a Linux kernel bug; in this situation ENXIO must be returned.!");
+            break;
+        case ENOENT:
+            lib_bug("platform::system::Linux", "O_CREAT is not set and the named file does not exist!");
+            lib_bug("platform::system::Linux", "A directory component in pathname does not exist or is a dangling symbolic link!");
+            lib_bug("platform::system::Linux", "pathname refers to a nonexistent directory, O_TMPFILE and one of O_WRONLY or O_RDWR were specified in flags, but this kernel version does not provide the O_TMPFILE functionality!");
+            break;
+        case ENOMEM:
+            lib_bug("platform::system::Linux", "The named file is a FIFO, but memory for the FIFO buffer can't be allocated because the per-user hard limit on memory allocation for pipes has been reached and the caller is not privileged; see pipe(7)!");
+            lib_bug("platform::system::Linux", "Insufficient kernel memory was available!");
+            break;
+        case ENOSPC:
+            lib_bug("platform::system::Linux", "pathname was to be created but the device containing pathname has no room for the new file!");
+            break;
+        case ENOTDIR:
+            lib_bug("platform::system::Linux", "A component used as a directory in pathname is not, in fact, a directory, or O_DIRECTORY was specified and pathname was not a directory!");
+            lib_bug("platform::system::Linux", "(openat()) pathname is a relative pathname and dirfd is a file descriptor referring to a file other than a directory!");
+            break;
+        case ENXIO:
+            lib_bug("platform::system::Linux", "O_NONBLOCK | O_WRONLY is set, the named file is a FIFO, and no process has the FIFO open for reading!");
+            lib_bug("platform::system::Linux", "The file is a device special file and no corresponding device exists!");
+            lib_bug("platform::system::Linux", "The file is a UNIX domain socket!");
+            break;
+        case EOPNOTSUPP:
+            lib_bug("platform::system::Linux", "The filesystem containing pathname does not support O_TMPFILE!");
+            break;
+        case EOVERFLOW:
+            lib_bug("platform::system::Linux", "pathname refers to a regular file that is too large to be opened!");
+            break;
+        case EPERM:
+            lib_bug("platform::system::Linux", "The O_NOATIME flag was specified, but the effective user ID of the caller did not match the owner of the file and the caller was not privileged!");
+            lib_bug("platform::system::Linux", "The operation was prevented by a file seal!");
+            break;
+        case EROFS:
+            lib_bug("platform::system::Linux", "pathname refers to a file on a read-only filesystem and write access was requested!");
+            break;
+        case ETXTBSY:
+            lib_bug("platform::system::Linux", "pathname refers to an executable image which is currently being executed and write access was requested!");
+            lib_bug("platform::system::Linux", "pathname refers to a file that is currently in use as a swap file, and the O_TRUNC flag was specified!");
+            lib_bug("platform::system::Linux", "pathname refers to a file that is currently being read by the kernel (e.g., for module/firmware loading), and write access was requested!");
+            break;
+        case EWOULDBLOCK:
+            lib_bug("platform::system::Linux", "The O_NONBLOCK flag was specified, and an incompatible lease was held on the file (see fcntl(2))!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error mknodat(FileDescriptor dirfd, const char *path, u32 mode, u32 dev) {
+    if (mknodat(dirfd, path, mode, dev)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error rename(const char *src, const char *dst) {
+    if (rename(src, dst)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error renameat(FileDescriptor olddirfd, const char *oldpath, FileDescriptor newdirfd, const char *newpath) {
+    if (renameat(olddirfd, oldpath, newdirfd, newpath)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error truncate(const char *path, u64 size) {
+    if (truncate(path, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error ftruncate(FileDescriptor fd, u64 size) {
+    if (ftruncate(fd, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fallocate(FileDescriptor fd, u32 mode, u64 offset, u64 size) {
+    if (fallocate(fd, mode, offset, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (Directory Operations)
+///
+
+
+Error mkdir(const char *path, u32 mode) {
+    if (mkdir(path, mode)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error mkdirat(FileDescriptor dirfd, const char *path, u32 mode) {
+    if (mkdirat(dirfd, path, mode)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error rmdir(const char *path) {
+    if (rmdir(path)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error getcwd(char *buffer, u32 size) {
+    if (getcwd(buffer, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error chdir(const char *path) {
+    if (chdir(path)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fchdir(FileDescriptor fd) {
+    if (fchdir(fd)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error getdents(FileDescriptor fd, struct linux_dirent *dirp, u32 size) {
+    if (syscall(SYS_getdents, fd, dirp, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+///
+/// File System (Link Operations)
+///
+
+
+Error link(const char *oldpath, const char *newpath) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error symlink(const char *oldpath, const char *newpath) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error symlinkat(const char *target, int newdirfd, const char *linkpath) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error unlink(const char *pathname) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error unlinkat(int dirfd, const char *pathname, int flags) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error readlink(const char *path, char *buf, u32 bufsiz) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error readlinkat(int dirfd, const char *pathname, char *buf, u32 bufsiz) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (Basic File Attributes)
+///
+
+
+Error umask(u32 mask) {
+    if (umask(mask)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error stat(const char *path, FileInfo *info) {
+    struct stat st;
+
+    if (stat(path, &st)) {
+        return Error::FAILURE;
+    }
+
+    time_init_dsn(&info->access_time, st.st_atim.tv_sec / 86400, st.st_atim.tv_sec % 86400, st.st_atim.tv_nsec);
+    time_init_dsn(&info->modify_time, st.st_mtim.tv_sec / 86400, st.st_mtim.tv_sec % 86400, st.st_mtim.tv_nsec);
+    time_init_dsn(&info->change_time, st.st_ctim.tv_sec / 86400, st.st_ctim.tv_sec % 86400, st.st_ctim.tv_nsec);
+    info->dev = st.st_dev;
+    info->ino = st.st_ino;
+    info->mode = st.st_mode;
+    info->nlink = st.st_nlink;
+    info->uid = st.st_uid;
+    info->gid = st.st_gid;
+    info->rdev = st.st_rdev;
+    info->size = st.st_size;
+    info->blksize = st.st_blksize;
+    info->blocks = st.st_blocks;
+    return Error::SUCCESS;
+}
+
+
+Error lstat(const char *path, FileInfo *info) {
+    struct stat st;
+
+    if (lstat(path, &st)) {
+        return Error::FAILURE;
+    }
+
+    time_init_dsn(&info->access_time, st.st_atim.tv_sec / 86400, st.st_atim.tv_sec % 86400, st.st_atim.tv_nsec);
+    time_init_dsn(&info->modify_time, st.st_mtim.tv_sec / 86400, st.st_mtim.tv_sec % 86400, st.st_mtim.tv_nsec);
+    time_init_dsn(&info->change_time, st.st_ctim.tv_sec / 86400, st.st_ctim.tv_sec % 86400, st.st_ctim.tv_nsec);
+    info->dev = st.st_dev;
+    info->ino = st.st_ino;
+    info->mode = st.st_mode;
+    info->nlink = st.st_nlink;
+    info->uid = st.st_uid;
+    info->gid = st.st_gid;
+    info->rdev = st.st_rdev;
+    info->size = st.st_size;
+    info->blksize = st.st_blksize;
+    info->blocks = st.st_blocks;
+    return Error::SUCCESS;
+}
+
+
+Error fstat(FileDescriptor fd, FileInfo *info) {
+    struct stat st;
+
+    if (fstat(fd, &st)) {
+        return Error::FAILURE;
+    }
+
+    time_init_dsn(&info->access_time, st.st_atim.tv_sec / 86400, st.st_atim.tv_sec % 86400, st.st_atim.tv_nsec);
+    time_init_dsn(&info->modify_time, st.st_mtim.tv_sec / 86400, st.st_mtim.tv_sec % 86400, st.st_mtim.tv_nsec);
+    time_init_dsn(&info->change_time, st.st_ctim.tv_sec / 86400, st.st_ctim.tv_sec % 86400, st.st_ctim.tv_nsec);
+    info->dev = st.st_dev;
+    info->ino = st.st_ino;
+    info->mode = st.st_mode;
+    info->nlink = st.st_nlink;
+    info->uid = st.st_uid;
+    info->gid = st.st_gid;
+    info->rdev = st.st_rdev;
+    info->size = st.st_size;
+    info->blksize = st.st_blksize;
+    info->blocks = st.st_blocks;
+    return Error::SUCCESS;
+}
+
+
+Error chmod(const char *path, u32 mode) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fchmod(FileDescriptor fd, u32 mode) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fchmodat(FileDescriptor dirfd, const char *pathname, u32 mode, u32 flags) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error chown(const char *path, Uid owner, Gid group) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error lchown(const char *path, Uid owner, Gid group) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fchown(FileDescriptor fd, Uid owner, Gid group) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fchownat(FileDescriptor dirfd, const char *pathname, Uid owner, Gid group, u32 flags) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error futimens(FileDescriptor fd, const Time *times) {
+
+}
+
+
+Error utimensat(FileDescriptor fd, const char *path, const Time *times, u32 flags) {
+
+}
+
+
+Error access(const char *path, u32 mode) {
+
+}
+
+
+Error faccessat(FileDescriptor dirfd, const char *pathname, u32 mode, u32 flags) {
+    if (1) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (Extended File Attributes)
+///
+
+
+Error getxattr(const char *path, const char *name, void *value, u32 size) {
+    if (getxattr(path, name, value, size) == -1) {
+        switch (errno) {
+        case E2BIG:
+            lib_bug("platform::system::Linux", "The size of the attribute value is larger than the maximum size allowed; the attribute cannot be retrieved!");
+            break;
+        case ENODATA:
+            lib_error("platform::system::Linux", "The named attribute does not exist, or the process has no access to this attribute!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        case ERANGE:
+            lib_error("platform::system::Linux", "The size of the value buffer is too small to hold the result!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error lgetxattr(const char *path, const char *name, void *value, u32 size) {
+    if (lgetxattr(path, name, value, size) == -1) {
+        switch (errno) {
+        case E2BIG:
+            lib_bug("platform::system::Linux", "The size of the attribute value is larger than the maximum size allowed; the attribute cannot be retrieved!");
+            break;
+        case ENODATA:
+            lib_error("platform::system::Linux", "The named attribute does not exist, or the process has no access to this attribute!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        case ERANGE:
+            lib_error("platform::system::Linux", "The size of the value buffer is too small to hold the result!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fgetxattr(FileDescriptor fd, const char *name, void *value, u32 size) {
+    if (fgetxattr(fd, name, value, size) == -1) {
+        switch (errno) {
+        case E2BIG:
+            lib_bug("platform::system::Linux", "The size of the attribute value is larger than the maximum size allowed; the attribute cannot be retrieved!");
+            break;
+        case ENODATA:
+            lib_error("platform::system::Linux", "The named attribute does not exist, or the process has no access to this attribute!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        case ERANGE:
+            lib_error("platform::system::Linux", "The size of the value buffer is too small to hold the result!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error setxattr(const char *path, const char *name, const void *value, u32 size, u32 flags) {
+    if (setxattr(path, name, value, size, flags)) {
+        switch (errno) {
+        case EDQUOT:
+            lib_error("platform::system::Linux", "Disk quota limits meant that there is insufficient space remaining to store the extended attribute!");
+            break;
+        case EEXIST:
+            lib_error("platform::system::Linux", "XATTR_CREATE was specified, and the attribute exists already!");
+            break;
+        case ENODATA:
+            lib_error("platform::system::Linux", "XATTR_REPLACE was specified, and the attribute does not exist!");
+            break;
+        case ENOSPC:
+            lib_error("platform::system::Linux", "There is insufficient space remaining to store the extended attribute!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "The namespace prefix of name is not valid!");
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        case EPERM:
+            lib_error("platform::system::Linux", "The file is marked immutable or append-only!");
+            break;
+        case ERANGE:
+            lib_error("platform::system::Linux", "The size of name or value exceeds a filesystem-specific limit!");
+            break;
+        //In addition, the errors documented in stat(2) can also occur.
+        }
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error lsetxattr(const char *path, const char *name, const void *value, u32 size, u32 flags) {
+    if (lsetxattr(path, name, value, size, flags)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fsetxattr(FileDescriptor fd, const char *name, const void *value, u32 size, u32 flags) {
+    if (fsetxattr(fd, name, value, size, flags)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error listxattr(const char *path, char *list, u32 size) {
+    if (listxattr(path, list, size)) {
+        switch (errno) {
+        case E2BIG:
+            lib_bug("platform::system::Linux", "The size of the attribute value is larger than the maximum size allowed; the attribute cannot be retrieved!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        case ERANGE:
+            lib_error("platform::system::Linux", "The size of the list buffer is too small to hold the result!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error llistxattr(const char *path, char *list, u32 size) {
+    if (llistxattr(path, list, size)) {
+        switch (errno) {
+        case E2BIG:
+            lib_bug("platform::system::Linux", "The size of the attribute value is larger than the maximum size allowed; the attribute cannot be retrieved!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        case ERANGE:
+            lib_error("platform::system::Linux", "The size of the list buffer is too small to hold the result!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error flistxattr(FileDescriptor fd, char *list, u32 size) {
+    if (flistxattr(fd, list, size)) {
+        switch (errno) {
+        case E2BIG:
+            lib_bug("platform::system::Linux", "The size of the attribute value is larger than the maximum size allowed; the attribute cannot be retrieved!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        case ERANGE:
+            lib_error("platform::system::Linux", "The size of the list buffer is too small to hold the result!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error removexattr(const char *path, const char *name) {
+    if (removexattr(path, name)) {
+        switch (errno) {
+        case ENODATA:
+            lib_error("platform::system::Linux", "The named attribute does not exist, or the process has no access to this attribute!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error lremovexattr(const char *path, const char *name) {
+    if (lremovexattr(path, name)) {
+        switch (errno) {
+        case ENODATA:
+            lib_error("platform::system::Linux", "The named attribute does not exist, or the process has no access to this attribute!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fremovexattr(FileDescriptor fd, const char *name) {
+    if (fremovexattr(fd, name)) {
+        switch (errno) {
+        case ENODATA:
+            lib_error("platform::system::Linux", "The named attribute does not exist, or the process has no access to this attribute!");
+            break;
+        case ENOTSUP:
+            lib_error("platform::system::Linux", "Extended attributes are not supported by the filesystem, or are disabled!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (File Descriptor Manipulations)
+///
+
+
+Error ioctl(FileDescriptor fd, int request, ...) {
+    return ioctl(fd, request);
+}
+
+
+Error fcntl(FileDescriptor fd, int cmd, int arg) {
+    if (fcntl(fd, cmd, arg)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error dup(FileDescriptor fd) {
+    if (dup(fd)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error dup2(FileDescriptor oldfd, FileDescriptor newfd) {
+    if (dup2(oldfd, newfd)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error flock(FileDescriptor fd, int operation) {
+    if (flock(fd, operation)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (Read/Write)
+///
+
+
+Error read(FileDescriptor fd, void *buffer, u32 size) {
+    if (read(fd, buffer, size)) {
+        switch (errno){
+        case EAGAIN:
+            lib_bug("platform::system::Linux", "The file descriptor has been marked nonblocking, and the read would block!");
+            break;
+        case EBADF:
+            lib_bug("platform::system::Linux", "The file descriptor is invalid or is not open for reading!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "The buffer is outside accessible address space!");
+            break;
+        case EINTR:
+            lib_error("platform::system::Linux", "The call was interrupted by a signal before any data was read!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "fd is attached to an object which is unsuitable for reading; or the file was opened with the O_DIRECT flag, and either the address specified in buf, the value specified in count, or the file offset is not suitably aligned.");
+            lib_bug("platform::system::Linux", "fd was created via a call to timerfd_create() and the wrong size buffer was given to read(); see timerfd_create(2) for further information.");
+            break;
+        case EIO:
+            lib_error("platform::system::Linux", "I/O error. This will happen for example when the process is in a background process group, tries to read from its controlling terminal, and either it is ignoring or blocking SIGTTIN or its process group is orphaned.  It may also occur when there is a low-level I/O error while reading from a disk or tape. A further possible cause of EIO on networked filesystems is when an advisory lock had been taken out on the file descriptor and this lock has been lost.");
+            break;
+        case EISDIR:
+            lib_bug("platform::system::Linux", "fd refers to a directory!");
+            break;
+        default:
+            lib_error("platform::system::Linux", "Unspecified error! ({:u})", errno);
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error readv(FileDescriptor fd, Buffer *buffers, u32 size) {
+    struct iovec buffers[size];
+
+    for (u32 i = 0; i < size; i++) {
+        buffers[i].iov_base = buffers[i].data;
+        buffers[i].iov_len = buffers[i].size;
+    }
+
+    if (readv(fd, buffers, size)) {
+        return Error::FAILURE;
+    }
+}
+
+
+Error pread(FileDescriptor fd, void *buffer, u32 size, i64 offset) {
+    if (pread(fd, buffer, size, offset)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error preadv(FileDescriptor fd, Buffer *buffers, u32 size, i64 offset) {
+    if (preadv(fd, buffers, size, offset)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error write(FileDescriptor fd, const void *buffer, u32 size) {
+    if (write(fd, buffer, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error writev(FileDescriptor fd, const Buffer *buffer, u32 size) {
+    if (writev(fd, buffer, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error pwrite(FileDescriptor fd, const void *buffer, u32 size, i64 offset) {
+    if (pwrite(fd, buffer, size, offset)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error pwritev(FileDescriptor fd, const Buffer *buffer, u32 size, i64 offset) {
+    if (pwritev(fd, buffer, size, offset)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error lseek(FileDescriptor fd, i64 offset, u32 whence) {
+    if (lseek(fd, offset, whence)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "whence is invalid.  Or: the resulting file offset would be negative, or beyond the end of a seekable device!");
+            break;
+        case ENXIO:
+            lib_bug("platform::system::Linux", "whence is SEEK_DATA or SEEK_HOLE, and offset is beyond the end of the file, or whence is SEEK_DATA and offset is within a hole at the end of the file!");
+            break;
+        case EOVERFLOW:
+            lib_error("platform::system::Linux", "The resulting file offset cannot be represented in an off_t!");
+            break;
+        case ESPIPE:
+            lib_bug("platform::system::Linux", "fd is associated with a pipe, socket, or FIFO!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error sendfile(FileDescriptor readfd, FileDescriptor writefd, const i64 *offset, u32 count) {
+    i32 sent = sendfile(readfd, writefd, offset, count);
+
+    if  (sent) {
+        switch (errno) {
+        case EAGAIN:
+            lib_error("platform::system::Linux", "Nonblocking I/O has been selected using O_NONBLOCK and the write would block");
+        case EBADF:
+            lib_bug("platform::system::Linux", "The input file was not opened for reading or the output file was not opened for writing!");
+            break;
+        case EFAULT:
+            lib_error("platform::system::Linux", "Bad address!");
+            break;
+        case EINVAL:
+            if (readfd & O_APPEND) {
+                lib_bug("platform::system::Linux", "readfd has the O_APPEND flag set. This is not currently supported by sendfile()!");
+            } else {
+                lib_error("platform::system::Linux", "Descriptor is not valid or locked, or an mmap()-like operation is not available for in_fd, or count is negative!");
+            }
+
+            break;
+        case EIO:
+            lib_error("platform::system::Linux", "Unspecified error while reading from in_fd!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "Insufficient memory to read from in_fd!");
+            break;
+        case EOVERFLOW:
+            lib_bug("platform::system::Linux", "count is too large, the operation would result in exceeding the maximum size of either the input file or the output file!");
+            break;
+        case ESPIPE:
+            lib_bug("platform::system::Linux", "offset is not NULL but the input file is not seekable!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (Synchronized I/O)
+///
+
+
+Error fdatasync(FileDescriptor fd) {
+    if (fdatasync(fd)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EIO:
+            lib_error("platform::system::Linux", "I/O error!");
+            break;
+        case ENOSPC:
+            lib_error("platform::system::Linux", "Out of disk space!");
+            break;
+        case EROFS:
+        case EINVAL:
+            lib_bug("platform::system::Linux", "fd is bound to a special file (e.g., a pipe, FIFO, or socket) which does not support synchronization!");
+            break;
+        case EDQUOT:
+            lib_errro("platform::system::Linux", "fd is bound to a file on NFS or another filesystem which does not allocate space at the time of a write() system call, and some previous write failed due to insufficient storage space!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error fsync(FileDescriptor fd) {
+    if (fsync(fd)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EIO:
+            lib_error("platform::system::Linux", "I/O error!");
+            break;
+        case ENOSPC:
+            lib_error("platform::system::Linux", "Out of disk space!");
+            break;
+        case EROFS:
+        case EINVAL:
+            lib_bug("platform::system::Linux", "fd is bound to a special file (e.g., a pipe, FIFO, or socket) which does not support synchronization!");
+            break;
+        case EDQUOT:
+            lib_errro("platform::system::Linux", "fd is bound to a file on NFS or another filesystem which does not allocate space at the time of a write() system call, and some previous write failed due to insufficient storage space!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error msync(void *address, u32 size, u32 flags) {
+    if (msync(address, size, flags)) {
+        switch (errno) {
+        case EBUSY:
+            lib_error("platform::system::Linux", "MS_INVALIDATE was specified in flags, and a memory lock exists for the specified address range!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "Invalid arguments!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "The indicated memory (or part of it) was not mapped!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error sync_file_range(FileDescriptor fd, u64 offset, u64 size, u32 flags) {
+    if (sync_file_range(fd, offset, size, flags)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "Invalid arguments!");
+            break;
+        case EIO:
+            lib_error("platform::system::Linux", "I/O error!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "Out of memory!");
+            break;
+        case ENOSPC:
+            lib_error("platform::system::Linux", "Out of disk space!");
+            break;
+        case ESPIPE:
+            lib_bug("platform::system::Linux", "fd refers to something other than a regular file, a block device, or a directory!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+void sync(void) {
+    sync();
+}
+
+
+Error syncfs(FileDescriptor fd) {
+    if (syncfs(fd)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EIO:
+            lib_error("platform::system::Linux", "I/O error!");
+            break;
+        case ENOSPC:
+            lib_error("platform::system::Linux", "Out of disk space!");
+            break;
+        case EDQUOT:
+            lib_error("platform::system::Linux", "Data was written to a file on NFS or another filesystem which does not allocate space at the time of a write() system call, and some previous write failed due to insufficient storage space!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (Asynchronous I/O)
+///
+
+
+Error io_setup(u32 nr_events, u64 *context) {
+    if (syscall(SYS_io_setup, nr_events, context)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error io_destroy(u64 context) {
+    if (syscall(SYS_io_destroy, context)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error io_submit(u64 context, u32 nr, IoCb **iocb) {
+    if (syscall(SYS_io_submit, context, nr, iocb)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error io_cancel(u64 context, IoCb *iocb, IoEvent *result) {
+    if (syscall(SYS_io_cancel, context, iocb, result)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error io_getevents(u64 context, u32 min_nr, u32 nr, IoEvent *events, const Time *timeout) {
+    if (syscall(SYS_io_getevents, context, min_nr, nr, events, timeout)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (Multiplexed I/O)
+///
+
+
+Error select(u32 nfds, SelectFd *restrict read_fds, SelectFd *restrict write_fds, SelectFd *restrict except_fds, const Time *restrict timeout) {
+    if (select(nfds, read_fds, write_fds, except_fds, timeout)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EINTR:
+            lib_error("platform::system::Linux", "A signal was caught; see signal(7)!");
+            break;
+        case EINVAL:
+            if (ndfs > getrlimit()) {
+                lib_error("platform::system::Linux", "nfds is negative or exceeds the RLIMIT_NOFILE resource limit!");
+            } else {
+                lib_error("platform::system::Linux", "The value contained within timeout is invalid!");
+            }
+
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "Unable to allocate memory for internal tables!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error pselect(u32 nfds, SelectFd *restrict read_fds, SelectFd *restrict write_fds, SelectFd *restrict except_fds, const Time *restrict timeout, const sigset_t *restrict sigmask) {
+    if (pselect(nfds, read_fds, write_fds, except_fds, timeout, sigmask)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error poll(const PollFd *restrict pollfds, u32 size, const Time *restrict timeout) {
+    if (poll(pollfds, size, timeout->seconds)) {
+        switch (errno) {
+        case EFAULT:
+            lib_bug("platform::system::Linux", "fds points outside the process's accessible address space. The array given as argument was not contained in the calling program's address space!");
+            break;
+        case EINTR:
+            lib_error("platform::system::Linux", "A signal occurred before any requested event!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "The nfds value exceeds the RLIMIT_NOFILE value!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "Unable to allocate memory for kernel data structures!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error ppoll(const PollFd *restrict pollfds, u32 size, const Time *restrict timeout, const sigset_t *restrict sigmask) {
+    if (ppoll(pollfds, size, timeout, sigmask)) {
+        switch (errno) {
+        case EFAULT:
+            lib_bug("platform::system::Linux", "fds points outside the process's accessible address space. The array given as argument was not contained in the calling program's address space!");
+            break;
+        case EINTR:
+            lib_error("platform::system::Linux", "A signal occurred before any requested event!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "The nfds value exceeds the RLIMIT_NOFILE value!");
+            lib_bug("platform::system::Linux", "The timeout value expressed in *ip is invalid!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "Unable to allocate memory for kernel data structures!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error epoll_create(void) {
+    if (epoll_create(1)) {
+        switch (errno) {
+        case EMFILE:
+            lib_error("platform::system::Linux", "The per-user limit on the number of epoll instances imposed by /proc/sys/fs/epoll/max_user_instances was encountered!");
+            lib_error("platform::system::Linux", "The per-process limit on the number of open file descriptors has been reached!");
+            break;
+        case ENFILE:
+            lib_error("platform::system::Linux", "The system-wide limit on the total number of open files has been reached!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "There was insufficient memory to create the kernel object!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error epoll_create1(u32 flags) {
+    if (epoll_create1(flags)) {
+        switch (errno) {
+        case EINVAL:
+            lib_bug("platform::system::Linux", "Invalid value specified in flags!");
+            break;
+        case EMFILE:
+            lib_error("platform::system::Linux", "The per-user limit on the number of epoll instances imposed by /proc/sys/fs/epoll/max_user_instances was encountered!");
+            lib_error("platform::system::Linux", "The per-process limit on the number of open file descriptors has been reached!");
+            break;
+        case ENFILE:
+            lib_error("platform::system::Linux", "The system-wide limit on the total number of open files has been reached!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "There was insufficient memory to create the kernel object!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error epoll_ctl(FileDescriptor epfd, u32 op, FileDescriptor fd, struct epoll_event *event) {
+    if (epoll_ctl(epfd, op, fd, event)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "epfd or fd is not a valid file descriptor!");
+            break;
+        case EEXIST:
+            lib_bug("platform::system::Linux", "op was EPOLL_CTL_ADD, and the supplied file descriptor fd is already registered with this epoll instance!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "epfd is not an epoll file descriptor, or fd is the same as epfd, or the requested operation op is not supported by this interface!");
+            lib_bug("platform::system::Linux", "An invalid event type was specified along with EPOLLEXCLUSIVE in events!");
+            lib_bug("platform::system::Linux", "op was EPOLL_CTL_MOD and events included EPOLLEXCLUSIVE!");
+            lib_bug("platform::system::Linux", "op was EPOLL_CTL_MOD and the EPOLLEXCLUSIVE flag has previously been applied to this epfd, fd pair!");
+            lib_bug("platform::system::Linux", "EPOLLEXCLUSIVE was specified in event and fd refers to an epoll instance!");
+            break;
+        case ELOOP:
+            lib_bug("platform::system::Linux", "fd refers to an epoll instance and this EPOLL_CTL_ADD operation would result in a circular loop of epoll instances monitoring one another or a nesting depth of epoll instances greater than 5!");
+            break;
+        case ENOENT:
+            lib_bug("platform::system::Linux", "op was EPOLL_CTL_MOD or EPOLL_CTL_DEL, and fd is not registered with this epoll instance!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "There was insufficient memory to handle the requested op control operation!");
+            break;
+        case ENOSPC:
+            lib_error("platform::system::Linux", "The limit imposed by /proc/sys/fs/epoll/max_user_watches was encountered while trying to register (EPOLL_CTL_ADD) a new file descriptor on an epoll instance!");
+            break;
+        case EPERM :
+            lib_bug("platform::system::Linux", "The target file fd does not support epoll.  This error can occur if fd refers to, for example, a regular file or a directory!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error epoll_wait(FileDescriptor epfd, struct epoll_event *restrict events, u32 maxevents, const Time *restrict timeout) {
+    if (epoll_wait(epfd, events, maxevents, timeout->seconds)) {
+        switch (errno) {
+        case EBADF :
+            lib_bug("platform::system::Linux", "epfd is not a valid file descriptor!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "The memory area pointed to by events is not accessible with write permissions!");
+            break;
+        case EINTR :
+            lib_bug("platform::system::Linux", "The call was interrupted by a signal handler before either (1) any of the requested events occurred or (2) the timeout expired; see signal(7)!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "epfd is not an epoll file descriptor, or maxevents is less than or equal to zero!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error epoll_pwait(FileDescriptor epfd, struct epoll_event *events, u32 maxevents, const Time *restrict timeout, const sigset_t *sigmask) {
+    if (epoll_pwait(epfd, events, maxevents, timeout->seconds, sigmask)) {
+        switch (errno) {
+        case EBADF :
+            lib_bug("platform::system::Linux", "epfd is not a valid file descriptor!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "The memory area pointed to by events is not accessible with write permissions!");
+            break;
+        case EINTR :
+            lib_bug("platform::system::Linux", "The call was interrupted by a signal handler before either (1) any of the requested events occurred or (2) the timeout expired; see signal(7)!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "epfd is not an epoll file descriptor, or maxevents is less than or equal to zero!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// File System (File Event Monitoring)
+///
+
+
+///
+/// File System (Misc)
+///
+
+
+///
+/// File System (System Wide Privileged)
+///
+
+
+Error pivot_root(const char *new_root, const char *put_old) {
+
+}
+
+
+Error swapon(const char *path, u32 flags) {
+
+}
+
+
+Error swapoff(const char *path) {
+
+}
+
+
+Error mount(const char *source, const char *target, const char *filesystemtype, u64 mountflags, const void *data) {
+
+}
+
+
+Error umount2(const char *target, u32 flags) {
+
+}
+
+
+Error nfsservctl(u32 cmd, struct nfsctl_arg *argp, union nfsctl_res *resp) {
+
+}
+
+
+///
+/// File System (System Wide Unprivileged)
+///
+
+#include <sys/vfs.h>
+
+
+Error statfs(const char *restrict path, FsInfo *restrict info) {
+    struct statfs tmp;
+
+    if (statfs(path, &tmp)) {
+        switch (errno) {
+        case EACCES:
+            lib_bug("platform::system::Linux", "Search permission is denied for a component of the path prefix of path!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "buf or path points to an invalid address!");
+            break;
+        case EINTR:
+            lib_bug("platform::system::Linux", "The call was interrupted by a signal!");
+            break;
+        case EIO:
+            lib_bug("platform::system::Linux", "An I/O error occurred while reading from the filesystem!");
+            break;
+        case ELOOP:
+            lib_bug("platform::system::Linux", "Too many symbolic links were encountered in translating path!");
+            break;
+        case ENAMETOOLONG:
+            lib_bug("platform::system::Linux", "path is too long!");
+            break;
+        case ENOENT:
+            lib_bug("platform::system::Linux", "The file referred to by path does not exist!");
+            break;
+        case ENOMEM:
+            lib_bug("platform::system::Linux", "Insufficient kernel memory was available!");
+            break;
+        case ENOSYS:
+            lib_bug("platform::system::Linux", "The filesystem does not support this call!");
+            break;
+        case ENOTDIR:
+            lib_bug("platform::system::Linux", "A component of the path prefix of path is not a directory!");
+            break;
+        case EOVERFLOW:
+            lib_bug("platform::system::Linux", "Some values were too large to be represented in the returned struct!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    info->type = tmp.f_type;
+    info->bsize = tmp.f_bsize;
+    info->blocks = tmp.f_blocks;
+    info->bfree = tmp.f_bfree;
+    info->bavail = tmp.f_bavail;
+    info->files = tmp.f_files;
+    info->ffree = tmp.f_ffree;
+    info->fs_id[0] = tmp.f_fsid.__val[0];
+    info->fs_id[1] = tmp.f_fsid.__val[1];
+    info->namelen = tmp.f_namelen;
+    info->frsize = tmp.f_frsize;
+    info->flags = tmp.f_flags;
+    return Error::SUCCESS;
+}
+
+
+Error fstatfs(FileDescriptor fd, FsInfo *info) {
+    struct statfs tmp;
+
+    if (fstatfs(fd, &tmp)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "fd is not a valid open file descriptor!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "buf or path points to an invalid address!");
+            break;
+        case EINTR:
+            lib_bug("platform::system::Linux", "The call was interrupted by a signal!");
+            break;
+        case EIO:
+            lib_bug("platform::system::Linux", "An I/O error occurred while reading from the filesystem!");
+            break;
+        case ENOMEM:
+            lib_bug("platform::system::Linux", "Insufficient kernel memory was available!");
+            break;
+        case ENOSYS:
+            lib_bug("platform::system::Linux", "The filesystem does not support this call!");
+            break;
+        case EOVERFLOW:
+            lib_bug("platform::system::Linux", "Some values were too large to be represented in the returned struct!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    info->type = tmp.f_type;
+    info->bsize = tmp.f_bsize;
+    info->blocks = tmp.f_blocks;
+    info->bfree = tmp.f_bfree;
+    info->bavail = tmp.f_bavail;
+    info->files = tmp.f_files;
+    info->ffree = tmp.f_ffree;
+    info->fs_id[0] = tmp.f_fsid.__val[0];
+    info->fs_id[1] = tmp.f_fsid.__val[1];
+    info->namelen = tmp.f_namelen;
+    info->frsize = tmp.f_frsize;
+    info->flags = tmp.f_flags;
+    return Error::SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///
+/// Network (Socket Operations)
+///
+
+
+Error socket(FileDescriptor *fd, u32 domain, u32 type, u32 protocol) {
+    if ((*fd = socket(domain, type, protocol))) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error socketpair(FileDescriptor *fd1, FileDescriptor *fd2, u32 domain, u32 type, u32 protocol) {
+    FileDescriptor sv[2];
+
+    if (socketpair(domain, type, protocol, sv)) {
+        return Error::FAILURE;
+    }
+
+    *fd1 = sv[0];
+    *fd2 = sv[1];
+    return Error::SUCCESS;
+}
+
+
+Error setsockopt(FileDescriptor fd, u32 level, u32 name, u32 value, u32 size) {
+    if (setsockname(fd, level, name, value, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error getsockopt(FileDescriptor fd, u32 level, u32 name, void *restrict value, const u32 *restrict size) {
+    if (getsockopt(fd, level, name, value, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error getsockname(FileDescriptor fd, SocketAddress *restrict address, u32 *restrict size) {
+    if (getsockname(fd, address, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error getpeername(FileDescriptor fd, SocketAddress *restrict address, u32 *restrict size) {
+    if (getpeername(fd, address, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error bind(FileDescriptor fd, SocketAddress *restrict address, u32 *restrict size) {
+    if (bind(fd, address, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error listen(FileDescriptor fd, u32 max) {
+    if (listen(fd, max)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error accept(FileDescriptor fd, SocketAddress *restrict address, u32 *restrict size) {
+    if (accept(fd, address, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error accept4(FileDescriptor fd, SocketAddress *restrict address, u32 *restrict size, u32 flags) {
+    if (accept4(fd, address, size, flags)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error connect(FileDescriptor fd, const SocketAddress *address, u32 size) {
+    if (connect(fd, address, size)) {
+        switch (errno) {
+        case EACCES:
+        case EPERM:
+            lib_bug("platform::system::Linux", "Write permission is denied on the socket file, or search permission is denied for one of the directories in the path prefix!");
+            lib_bug("platform::system::Linux", "The user tried to connect to a broadcast address without having the socket broadcast flag enabled or the connection request failed because of a local firewall rule or an SELinux policy denied a connection!");
+            break;
+        case EADDRINUSE:
+            lib_bug("platform::system::Linux", "Local address is already in use!");
+            break;
+        case EADDRNOTAVAIL:
+            lib_error("platform::system::Linux", "All port numbers in the ephemeral port range are currently in use!");
+            break;
+        case EAFNOSUPPORT:
+            lib_bug("platform::system::Linux", "The passed address didn't have the correct address family in its sa_family field!");
+            break;
+        case EAGAIN:
+            lib_error("platform::system::Linux", "For nonblocking UNIX domain sockets, the socket is nonblocking, and the connection cannot be completed immediately. For other socket families, there are insufficient entries in the routing cache!");
+            break;
+        case EALREADY:
+            lib_error("platform::system::Linux", "The socket is nonblocking and a previous connection attempt has not yet been completed!");
+            break;
+        case EBADF:
+            lib_bug("platform::system::Linux", "sockfd is not a valid open file descriptor!");
+            break;
+        case ECONNREFUSED:
+            lib_error("platform::system::Linux", "A connect() on a stream socket found no one listening on the remote address!");
+            break;
+        case EFAULT:
+            lib_bug("platform::system::Linux", "The socket structure address is outside the user's address space!");
+            break;
+        case EINPROGRESS:
+            lib_error("platform::system::Linux", "The socket is nonblocking and the connection cannot be completed immediately!");
+            break;
+        case EINTR:
+            lib_error("platform::system::Linux", "The system call was interrupted by a signal that was caught!");
+            break;
+        case EISCONN:
+            lib_bug("platform::system::Linux", "The socket is already connected!");
+            break;
+        case ENETUNREACH:
+            lib_error("platform::system::Linux", "Network is unreachable!");
+            break;
+        case ENOTSOCK:
+            lib_bug("platform::system::Linux", "The file descriptor does not refer to a socket!");
+            break;
+        case EPROTOTYPE:
+            lib_error("platform::system::Linux", "The socket type does not support the requested communications protocol!");
+            break;
+        case ETIMEDOUT:
+            lib_error("platform::system::Linux", "Timeout while attempting connection!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+void shutdown(FileDescriptor fd, u32 flags) {
+    if (shutdown(fd, flags)) {
+        switch (errno) {
+        case EBADF:
+            lib_bug("platform::system::Linux", "Invalid file descriptor!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "Invalid flags!");
+            break;
+        case ENOTCONN:
+            lib_bug("platform::system::Linux", "The socket was not connected!");
+            break;
+        case ENOTSOCK:
+            lib_bug("platform::system::Linux", "The file descriptor was not a socket!");
+            break;
+        }
+    }
+}
+
+
+///
+/// Network (Send/Receive)
+///
+
+
+Error recvfrom(i32 fd, void *buffer, u32 size, u32 flags, SocketAddress *address, u32 *address_size) {
+    if (recvfrom(fd, buffer, size, flags, address, address_size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error recvmsg(FileDescriptor fd, struct msghdr *msg, int flags) {
+    return Error::FAILURE;
+}
+
+
+Error sendto(i32 fd, const void *buffer, u32 size, u32 flags, SocketAddress *address, u32 address_size) {
+    if (sendto(fd, buffer, size, flags, address, address_size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error sendmsg(FileDescriptor fd, struct msghdr *msg, int flags) {
+    return Error::FAILURE;
+}
+
+
+///
+/// Network (Naming)
+///
+
+
+Error getdomainname(char *name, u32 size) {
+    if (getdomainname(name, size)) {
+        if (name) {
+            lib_error("platform::system::Linux", "name is too long!");
+        } else {
+            lib_bug("platform::system::Linux", "name is NULL!");
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error setdomainname(const char *name, u32 size) {
+    if (setdomainname(name, size)) {
+        switch (errno) {
+        case EFAULT:
+            lib_bug("platform::system::Linux", "name is invalid!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "size is too large!");
+            break;
+        case EPERM:
+            lib_error("platform::system::Linux", "The caller did not have the CAP_SYS_ADMIN capability in the user namespace associated with its UTS namespace!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error gethostname(char *name, u32 size) {
+    if (gethostname(name, size)) {
+        if (name) {
+            lib_error("platform::system::Linux", "name is too long!");
+        } else {
+            lib_bug("platform::system::Linux", "name is NULL!");
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error sethostname(const char *name, u32 size) {
+    if (sethostname(name, size)) {
+        switch (errno) {
+        case EFAULT:
+            lib_bug("platform::system::Linux", "name is invalid!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "size is too large!");
+            break;
+        case EPERM:
+            lib_error("platform::system::Linux", "The caller did not have the CAP_SYS_ADMIN capability in the user namespace associated with its UTS namespace!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// Network (Packet Filtering)
+///
+
+
+Error bpf(u32 cmd, const BpfAttr *attr, u32 size) {
+    if (bpf(cmd, attr, size)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+Error mmap(void *address_hint, u64 size, u32 prot, u32 flags, FileDescriptor fd, u32 offset) {
+    return mmap(address_hint, size, prot, flags, fd, offset);
+}
+
+
+Error munmap(void *address, u64 size) {
+    return munmap(address, size);
+}
+
+
+Error mremap(void *old_address, u64 old_size, u64 new_size, u32 flags, void *new_address) {
+    return mremap(old_address, old_size, new_size, flags, new_address);
+}
+
+
+Error mprotect(void *address, u64 size, u32 prot) {
+    return mprotect(address, size, prot);
+}
+
+
+Error msync(void *address, u64 size, u32 flags) {
+    return msync(address, size, flags);
+}
+
+
+Error mincore(void *address, u64 size, u8 *vec) {
+    return mincore(address, size, vec);
+}
+
+
+Error madvise(void *address, u64 size, u32 advice) {
+    return madvise(address, size, advice);
+}
+
+
+Error mlock(const void *address, u64 size) {
+    return mlock(address, size);
+}
+
+
+Error munlock(const void *address, u64 size) {
+    return munlock(address, size);
+}
+
+
+Error mlockall(u32 flags) {
+    return mlockall(flags);
+}
+
+
+Error munlockall(void) {
+    return munlockall();
+}
+
+
+Error mbind(void *address, u64 size, u32 mode, const u64 *nodemask, u64 maxnode, u32 flags) {
+    return mbind(address, size, mode, nodemask, maxnode, flags);
+}
+
+
+Error shmget(key_t key, u64 size, u32 flags) {
+    return shmget(key, size, flags);
+}
+
+
+Error shmat(u32 id, const void *address, u32 flags) {
+    return shmat(id, address, flags);
+}
+
+
+Error shmctl(u32 id, u32 cmd, struct shmid_ds *buffer) {
+    return shmctl(id, cmd, buffer);
+}
+
+
+Error brk(void *address) {
+    return brk(address);
+}
+
+
+void *sbrk(u32 increment) {
+    return sbrk(increment);
+}
+
+
+
+
+
+
+
+
+
+
+
+Error sigaction(u32 signum, struct sigaction *act, struct sigaction *oldact) {
+    return sigaction();
+}
+
+
+Error sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
+    return sigprocmask();
+}
+
+
+Error sigreturn(unsigned long __unused) {
+    return sigreturn();
+}
+
+
+Error sigpending(sigset_t *set) {
+    return sigpending(set);
+}
+
+
+Error sigtimedwait(const sigset_t *set, siginfo_t *info, struct timespec *timeout) {
+    return sigtimedwait();
+}
+
+
+Error sigqueueinfo(Pid tgid, int sig, siginfo_t *info) {
+    return sigqueue();
+}
+
+
+Error sigsuspend(const sigset_t *mask) {
+    return sigsuspend();
+}
+
+
+Error sigaltstack(const stack_t *ss, stack_t *oss) {
+    return sigaltstack();
+}
+
+
+
+
+
+
+
+
+
+Error access(const char *pathname, int mode) {
+    return 1;
+}
+
+
+Error sched_yield(void) {
+    return sched_yield();
+}
+
+
+Error pause(void) {
+    return 1;
+}
+
+
+Error nanosleep(struct timespec *req, struct timespec *rem) {
+    return 1;
+}
+
+
+Error getitimer(int which, struct itimerval *curr_value) {
+    return 1;
+}
+
+
+Error alarm(unsigned int seconds) {
+    return 1;
+}
+
+
+Error setitimer(int which, struct itimerval *new_value, struct itimerval *old_value) {
+    return 1;
+}
+
+
+Error getpid(void) {
+    return 1;
+}
+
+
+///
+/// IPC (Pipe)
+///
+
+
+Error pipe(FileDescriptor *input, FileDescriptor *output) {
+    FileDescriptor fds[2];
+
+    if (pipe(fds)) {
+        switch (errno) {
+        case EFAULT: lib_error("platform::system::Linux", "pipefd is not valid."); break;
+        case EMFILE: lib_error("platform::system::Linux", "The per-process limit on the number of open file descriptors has been reached."); break;
+        case ENFILE:
+            lib_error("platform::system::Linux", "The system-wide limit on the total number of open files has been reached.");
+            lib_error("platform::system::Linux", "The user hard limit on memory that can be allocated for pipes has been reached and the caller is not privileged.");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    *output = fds[0];
+    *input = fds[1];
+    return Error::SUCCESS;
+}
+
+
+Error pipe2(FileDescriptor *input, FileDescriptor *output, u32 flags) {
+    FileDescriptor fds[2];
+
+    if (pipe(fds)) {
+        switch (errno) {
+        case EFAULT:
+            lib_bug("platform::system::Linux", "pipe: The file descriptor is not valid.");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "pipe: Invalid value in flags!");
+            break;
+        case EMFILE:
+            lib_error("platform::system::Linux", "The per-process limit on the number of open file descriptors has been reached.");
+            break;
+        case ENFILE:
+            lib_error("platform::system::Linux", "The system-wide limit on the total number of open files has been reached.");
+            lib_error("platform::system::Linux", "The user hard limit on memory that can be allocated for pipes has been reached and the caller is not privileged.");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    *output = fds[0];
+    *input = fds[1];
+    return Error::SUCCESS;
+}
+
+
+Error tee(FileDescriptor input, FileDescriptor output, u32 size, u32 flags) {
+    if (tee(input, output, size, flags)) {
+        switch (errno) {
+        case EAGAIN:
+            lib_bug("platform::system::Linux", "tee: SPLICE_F_NONBLOCK was specified in flags or one of the file descriptors had been marked as nonblocking (O_NONBLOCK), and the operation would block.");
+            break;
+        case EINVAL:
+            lib_error("platform::system::Linux", "tee: Either input or output does not refer to a pipe; or input and output refer to the same pipe!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "tee: Out of memory.");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+Error splice(FileDescriptor input, u64 input_offset, FileDescriptor output, u64 output_offset, u32 size, u32 flags) {
+    if (splice(input, input_offset, output, output_offset, size, flags)) {
+        switch (errno) {
+        case EAGAIN:
+            lib_bug("platform::system::Linux", "splice: SPLICE_F_NONBLOCK was specified in flags or one of the file descriptors had been marked as nonblocking (O_NONBLOCK), and the operation would block!");
+            break;
+        case EBADF:
+            lib_bug("platform::system::Linux", "splice: One or both file descriptors are not valid, or do not have proper read-write mode!");
+            break;
+        case EINVAL:
+            lib_bug("platform::system::Linux", "splice: Either input or output does not refer to a pipe; or input and output refer to the same pipe!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "splice: Out of memory.");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+///
+/// IPC (Shared Memory)
+///
+
+
+// Allocates a System V shared memory segment
+Error shmget(u32 key, u32 size, u32 flags) {
+    if (shmget(key, size, flags)) {
+        switch (errno) {
+        case EACCES:
+            lib_error("platform::system::Linux", "The user does not have permission to access the shared memory segment, and does not have the CAP_IPC_OWNER capability in the user namespace that governs its IPC namespace.");
+            break;
+        case EEXIST:
+            lib_error("platform::system::Linux", "IPC_CREAT and IPC_EXCL were specified in shmflg, but a shared memory segment already exists for key!");
+            break;
+        case EINVAL:
+            lib_error("platform::system::Linux", "A new segment was to be created and size is less than SHMMIN or greater than SHMMAX!");
+            lib_error("platform::system::Linux", "A segment for the given key exists, but size is greater than the size of that segment!");
+            break;
+        case ENFILE:
+            lib_error("platform::system::Linux", "The system-wide limit on the total number of open files has been reached!");
+            break;
+        case ENOENT:
+            lib_error("platform::system::Linux", "No segment exists for the given key, and IPC_CREAT was not specified!");
+            break;
+        case ENOMEM:
+            lib_error("platform::system::Linux", "No memory could be allocated for segment overhead!");
+            break;
+        case ENOSPC:
+            lib_error("platform::system::Linux", "All possible shared memory IDs have been taken (SHMMNI), or allocating a segment of the requested size would cause the system to exceed the system-wide limit on shared memory (SHMALL)!");
+            break;
+        case EPERM:
+            lib_error("platform::system::Linux", "The SHM_HUGETLB flag was specified, but the caller was not privileged (did not have the CAP_IPC_LOCK capability) and is not a member of the sysctl_hugetlb_shm_group group; see the description of /proc/sys/vm/sysctl_hugetlb_shm_group in proc(5)!");
+            break;
+        }
+
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+// System V shared memory control
+Error shmctl() {
+    return Error::SUCCESS;
+}
+
+
+// Attach the System V shared memory segment to the address space of the calling process
+Error shmat(u32 id, const void *address, u32 flags) {
+    if (shmat(id, address, flags)) {
+        return Error::FAILURE;
+    }
+
+    return Error::SUCCESS;
+}
+
+
+// Dettach the System V shared memory segment to the address space of the calling process
+void shmdt(const void *address) {
+    if (shmdt(address)) {
+        lib_bug("platform::system::Linux", "There is no shared memory segment attached at shmaddr; or shmaddr is not aligned on a page boundary!");
+    }
+}

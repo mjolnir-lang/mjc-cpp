@@ -29,6 +29,58 @@ char *[7]*()**[8][] foo;
 */
 
 
+
+
+
+
+#include <core/Enum.hpp>
+
+
+template<class CTypeType>
+struct CTypeTypeValues {
+    static constexpr CTypeType VOID{0};
+    static constexpr CTypeType ARRAY{1};
+    static constexpr CTypeType FUNCTION{2};
+    static constexpr CTypeType POINTER{3};
+    static constexpr CTypeType STRUCTURE{4};
+    static constexpr CTypeType UNION{5};
+    static constexpr CTypeType ENUMERATION{6};
+};
+
+
+class CTypeType : public Enum<u8>, public CTypeTypeValues<CTypeType> {
+public:
+
+
+    constexpr
+    explicit
+    CTypeType(u8 id) noexcept : Enum(id) {}
+
+
+    constexpr
+    bool is_basic() noexcept {
+        return _id;
+    }
+
+
+    constexpr
+    bool is_derived() noexcept {
+        return _id;
+    }
+
+
+    constexpr
+    bool is_builtin() noexcept {
+        return _id;
+    }
+};
+
+
+
+
+
+
+
 struct CTypeFlags {
     u32 is_const : 1;
     u32 is_volatile : 1;
@@ -53,6 +105,7 @@ public:
 
 /// @brief An `CType` is defines the properties of an `CObject`.
 class CType {
+    CTypeType _type;
 protected:
     static const Vector<CMember *> MEMBERS;
     static const Vector<COperator *> OPERATORS;
@@ -60,6 +113,12 @@ public:
 
 
     virtual ~CType() = default;
+
+
+    /// @brief Return the size of the type in bytes.
+    CTypeType type() const noexcept {
+        return _type;
+    }
 
 
     /// @brief Return the size of the type in bytes.

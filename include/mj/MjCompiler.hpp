@@ -5,15 +5,11 @@
 
 class MjCompiler {
 private:
-    MjProgram &program_;
+    MjProgram &_program;
 public:
 
 
-    MjCompiler(
-        MjProgram &program
-    ) :
-        program_(program)
-    {}
+    MjCompiler(MjProgram &program) noexcept : _program(program) {}
 
 
     ~MjCompiler() {
@@ -21,7 +17,7 @@ public:
     }
 
 
-    void compile(const Path &path) {
+    void compile(const FilePath &path) {
         ;
     }
 };

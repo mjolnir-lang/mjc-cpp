@@ -1,13 +1,12 @@
 #pragma once
 
-#include <mj/ast/MjType.hpp>
+#include <mj/ast/MjExpression.hpp>
 
 #include <type_traits>
 
 
-class MjNumberLiteral {
+class MjNumberLiteral : public MjExpression {
 private:
-    const MjToken *_definition;
     MjType *_type;
     union {
         u8 as_u8;
@@ -30,7 +29,7 @@ public:
 
 
     constexpr
-    MjNumberLiteral(const MjToken &token) noexcept {}
+    MjNumberLiteral(Slice<const MjToken> tokens) noexcept : MjExpression(tokens) {}
 
 
     ///
@@ -39,7 +38,7 @@ public:
 
 
     constexpr
-    MjType *type() const noexcept {
+    MjType *result_type() const noexcept final {
         return _type;
     }
 

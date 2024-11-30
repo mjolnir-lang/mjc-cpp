@@ -1,6 +1,6 @@
 #pragma once
 
-#include <std/Common.hpp>
+#include <core/Common.hpp>
 
 
 /// An `CStorage` object is a memory backing for compile time emulation and execution as well as for storing raw data.

@@ -1,8 +1,20 @@
 #pragma once
 
+#include <mj/ast/MjFile.hpp>
 #include <mj/ast/MjProgram.hpp>
+#include <mj/ast/MjTypeAlias.hpp>
+#include <mj/ast/MjTypeTemplate.hpp>
+#include <mj/ast/MjClassType.hpp>
+#include <mj/ast/MjBitfieldType.hpp>
+#include <mj/ast/MjStructureType.hpp>
+#include <mj/ast/MjUnionType.hpp>
+#include <mj/ast/MjTypeEnumeration.hpp>
+#include <mj/ast/MjTypeImplementation.hpp>
+#include <mj/ast/MjInterfaceType.hpp>
 
-#include <std/File.hpp>
+//#include <mj/internal/MjParserError.hpp>
+
+#include <filesystem>
 
 
 // syntax errors (matching braces, termination, sequence)
@@ -13,10 +25,7 @@ private:
 public:
 
 
-    MjParseError(
-        MjToken token,
-        StringView message
-    ) :
+    MjParseError(MjToken token, StringView message) noexcept :
         _token(token),
         _message(message)
     {}
@@ -26,29 +35,27 @@ public:
 // The parser consumes the output of the lexer and emits the AST components while controlling the parsing context.
 class MjParser {
 private:
-    const File &_file;
-    const Vector<MjToken> &_tokens;
+    const MjFile &_file;
     Vector<MjParseError> _errors;
     MjProgram _program;
     const MjToken *_token;
 public:
 
 
-    MjParser(
-        const File &file,
-        const Vector<MjToken> &tokens
-    ) :
-        _file(file),
-        _tokens(tokens),
-        _token(&_tokens[0])
-    {}
+    static    
+    MjProgram parse(const MjFile &file) noexcept;
 
 
-    MjProgram &parse();
 private:
 
 
-    void error(StringView message);
+    MjParser(const MjFile &file) noexcept :
+        _file(file),
+        _token(&_file.tokens()[0])
+    {}
+
+
+    void error(StringView message) noexcept;
 
 
     ///
@@ -56,23 +63,29 @@ private:
     ///
 
 
-    void reset(const MjToken *token) {
+    void reset(const MjToken *token) noexcept {
         _token = token;
     }
 
 
-    void skip_token() {
+    void skip_token() noexcept {
         _token += 1;
     }
 
 
     StringView token_text() noexcept {
-        return _file.lines()[_token->line].slice(_token->offset, _token->size);
+        return _file.line(_token->line).slice(_token->offset, _token->size);
     }
 
 
-    const MjToken *peek_token(MjTokenType type) noexcept {
+    const MjToken *peek_token() noexcept {
         return _token + 1;
+    }
+
+
+    const MjToken *peek_token(MjTokenKind type) noexcept {
+        const MjToken *token = _token + 1;
+        return token->kind == type ? token : nullptr;
     }
 
 
@@ -81,14 +94,14 @@ private:
     }
 
 
-    const MjToken *parse_token(MjTokenType type) noexcept {
-        return _token->type == type ? _token : nullptr;
+    const MjToken *parse_token(MjTokenKind type) noexcept {
+        return _token->kind == type ? _token : nullptr;
     }
 
 
     constexpr
-    bool match_token(MjTokenType type) const noexcept {
-        return _token->type == type;
+    bool match_token(MjTokenKind type) const noexcept {
+        return _token->kind == type;
     }
 
 
@@ -105,19 +118,28 @@ private:
 
     /// @brief Parse a module
     /// @return 
-    MjModule *parse_module(const Path &path);
+    MjModule *parse_module(std::filesystem::path path) noexcept;
 
 
     /// @brief Parse a file
     /// @return 
-    void parse_file(MjModule &module, const Path &path);
+    void parse_file(MjModule &module, std::filesystem::path path) noexcept;
 
 
+    /// @brief Parse an item.
+    /// @return 
+    MjItem *parse_item() noexcept;
 
-    MjAnnotation *parse_annotation();
+
+    /// @brief Parse an item.
+    /// @return 
+    MjDirective *parse_directive() noexcept;
 
 
-    MjComment *parse_comment();
+    MjAnnotation *parse_annotation() noexcept;
+
+
+    MjComment *parse_comment() noexcept;
 
 
     ///
@@ -133,7 +155,7 @@ private:
 
     /// @brief Parse any type declaration
     /// @return 
-    void parse_type_definition(MjType &type);
+    MjType *parse_type_definition() noexcept;
 
 
     /// @brief Parse a type enumeration.
@@ -145,7 +167,7 @@ private:
     /// ```
     ///
     /// @return 
-    void parse_bitfield_type_definition(MjType &type);
+    void parse_bitfield_type_definition(MjType &type) noexcept;
 
 
     // Parse a class definition:
@@ -157,19 +179,16 @@ private:
     //     - Parse the member, shared, and implementation declarations (everything before '{', '=', or ';')
     //     - Verify type references
     //     - Parse the member, shared, and implementation definitions
-    void parse_class_type_definition(MjType &type);
+    MjClassType *parse_class_type_definition() noexcept;
 
 
-    void parse_interface_type_definition(MjType &type);
+    MjInterfaceType *parse_interface_type_definition() noexcept;
 
 
-    void parse_structure_type_definition(MjType &type);
+    MjStructureType *parse_structure_type_definition() noexcept;
 
 
-    void parse_union_type_definition(MjType &type);
-
-
-    void parse_variant_type_definition(MjType &type);
+    MjUnionType *parse_union_type_definition() noexcept;
 
 
     ///
@@ -184,7 +203,7 @@ private:
     /// ```
     ///
     /// @return 
-    void parse_type_alias(MjType &type);
+    MjTypeAlias *parse_type_alias() noexcept;
 
 
     /// @brief Parse a type alias template.
@@ -194,7 +213,7 @@ private:
     /// ```
     ///
     /// @return 
-    void parse_type_alias_template(MjTypeTemplate &type_template);
+    void parse_type_alias_template() noexcept;
 
 
     /// @brief Parse a type enumeration.
@@ -209,7 +228,7 @@ private:
     /// ```
     ///
     /// @return 
-    void parse_type_enumeration(MjType &type);
+    void parse_type_enumeration(MjType &type) noexcept;
 
 
     /// @brief Parse a type implementation.
@@ -221,7 +240,7 @@ private:
     /// ```
     ///
     /// @return 
-    void parse_type_implementation(MjType &type);
+    void parse_type_implementation(MjType &type) noexcept;
 
 
     ///
@@ -230,7 +249,7 @@ private:
 
 
     /// @brief Parse a type expression.
-    MjType *parse_type_expression();
+    MjType *parse_type_expression() noexcept;
 
 
     /// @brief Parse a generic type name.
@@ -239,10 +258,10 @@ private:
     /// TypeName<TypeArguments>
     /// TypeName<TypeParameters>
     /// ```
-    MjType *parse_type_name();
+    MjType *parse_type_name() noexcept;
 
 
-    MjType *parse_type();
+    MjType *parse_type() noexcept;
 
 
     ///
@@ -250,10 +269,10 @@ private:
     ///
 
 
-    MjStatement *parse_statement();
+    MjStatement *parse_statement() noexcept;
 
 
-    MjStatement *parse_variable_declaration();
+    MjStatement *parse_variable_declaration() noexcept;
 
 
     ///
@@ -261,7 +280,7 @@ private:
     ///
 
 
-    MjExpression *parse_expression(u32 min_bp = 0);
+    MjExpression *parse_expression(u32 min_bp = 0) noexcept;
 
 
     ///
@@ -269,9 +288,12 @@ private:
     ///
 
 
-    MjTemplateArgumentList *parse_template_argument_list();
+    MjTemplateArgument *parse_template_argument() noexcept;
 
-    MjTemplateParameterList *parse_template_parameter_list();
+
+    MjTemplateArgumentList *parse_template_argument_list() noexcept;
+
+    MjTemplateParameterList *parse_template_parameter_list() noexcept;
 
 
     ///
@@ -289,7 +311,7 @@ private:
     ///
 
 
-    MjFunctionArgumentList *parse_function_argument_list();
+    MjFunctionArgumentList *parse_function_argument_list() noexcept;
 
-    MjFunctionParameterList *parse_function_parameter_list();
+    MjFunctionParameterList *parse_function_parameter_list() noexcept;
 };

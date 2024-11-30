@@ -91,6 +91,17 @@ public:
     void print(const CStructureType &structure_type);
 
 
+    void print_type_name(const CType &type) noexcept;
+    void print_type_declaration(const CType &type) noexcept;
+    void print_type_definition(const CType &type) noexcept;
+
+
+    void print_structure_type_name(const CStructureType &type) noexcept;
+    void print_structure_type_declaration(const CStructureType &type) noexcept;
+    void print_structure_type_definition(const CStructureType &type) noexcept;
+
+
+
     void print(const CUnionType &union_type);
 
 

@@ -15,6 +15,6 @@ public:
 };
 
 
-#include <c/ast/type/CArrayType.hpp>
-#include <c/ast/type/CFunctionType.hpp>
-#include <c/ast/type/CPointerType.hpp>
+#include <c/ast/CArrayType.hpp>
+#include <c/ast/CFunctionType.hpp>
+#include <c/ast/CPointerType.hpp>

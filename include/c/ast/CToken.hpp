@@ -1,6 +1,6 @@
 #pragma once
 
-#include <std/Common.hpp>
+#include <core/Common.hpp>
 
 
 enum class CTokenType : u16 {

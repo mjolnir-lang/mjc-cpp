@@ -1,6 +1,7 @@
 #pragma once
 
 #include <c/ast/CToken.hpp>
+#include <core/String.hpp>
 
 
 /// @brief An `CComment` is a source code annotation attatched to AST objects.

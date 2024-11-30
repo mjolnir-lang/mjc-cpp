@@ -14,6 +14,10 @@
 -0b1111001u32
 0x3FEAp+32
 
+
+
+32, 12'334'333.333, sds, 
+
 mod::var
 var.var
 
@@ -43,9 +47,6 @@ var -= var
 var &= var
 var ^= var
 var |= var
-var &&= var
-var ^^= var
-var ||= var
 
 var >> var
 var << var
@@ -58,15 +59,12 @@ var & var
 var ^ var
 var | var
 var && var
-var ^^ var
 var || var
-var !& var
-var !^ var
-var !| var
 
 
 var == var
 var != var
+
 var <=> var
 var < var
 var <= var
@@ -82,7 +80,6 @@ var;
 var, var
 
 func()
-
 
 var[]
 var[3]
@@ -108,8 +105,8 @@ class Test {
 
     @shared
     const u8[34] VALUES = [
-        for (u32 i = 0; i < this.size(); i++) {
-            this[i] = 3 * i
+        for (u32 i = 0; i < .size(); i++) {
+            .this[i] = 3 * i
         }
     ]
 

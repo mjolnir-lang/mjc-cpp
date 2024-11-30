@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mj/ast/MjStatement.hpp>
+#include <mj/ast/MjTypeImplementationDefinition.hpp>
 
 
 // The 'implementation' scope is a context for defining types, members,
@@ -18,5 +18,6 @@
 // }
 class MjTypeImplementation {
 private:
+    MjTypeImplementationDefinition *_definition;
 public:
 };

@@ -29,6 +29,6 @@ public:
 };
 
 
-#include <c/ast/type/CEnumerationType.hpp>
-#include <c/ast/type/CStructureType.hpp>
-#include <c/ast/type/CUnionType.hpp>
+#include <c/ast/CEnumerationType.hpp>
+#include <c/ast/CStructureType.hpp>
+#include <c/ast/CUnionType.hpp>

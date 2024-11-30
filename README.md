@@ -4,7 +4,7 @@
 
 - `token` - Token
 - `ast` - Abstract Syntax Tree (parser -> compiler/transpiler/jit/vm)
-- `asm` - Assmebly
+- `asm` - Assembly
 - `bc` - Byte Code
 - `ir` - Intermediate Representation (Platform Agnostic ASM)
 - `ir-asm` - IR Human Readable ASM
@@ -66,7 +66,7 @@ The AST must support including CST metadata as part of formatting, linting, edit
   - everything from linting
 - editing
   - mutable nodes
-- analysing
+- analyzing
   - high level preservation
 
 syntax analysis
