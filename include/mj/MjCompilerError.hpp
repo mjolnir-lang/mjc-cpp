@@ -1,7 +1,20 @@
 #pragma once
 
 #include <core/StringView.hpp>
-#include <core/Enum.hpp>
+
+
+/*
+// semantic error (types, operators, math, templates, usages, missing, duplicate)
+class MjCompilerError {
+private:
+    StringView _message;
+public:
+
+
+    constexpr
+    MjCompilerError(StringView message) noexcept : _message(message) {}
+};
+*/
 
 
 template<class MjCompilerError>
