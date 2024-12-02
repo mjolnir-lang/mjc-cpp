@@ -34,10 +34,10 @@ MjFile *MjLexer::parse_file(std::filesystem::path path, bool emit_subtokens) noe
 Error MjLexer::parse() noexcept {
     _line_index = 0;
     _line_indent = 0;
-    _line = _file.line(0);
+    _ch = _file.line(0);
     parse_indent();
 
-    while (!_at_eof) {
+    while (*_ch) {
         parse_token();
     }
 
@@ -64,8 +64,9 @@ Error MjLexer::parse_token() noexcept {
     StringView token_text;
     StringView error_message;
     MjTokenKind token_kind = MjTokenKind::NONE;
+    u32 token_size = 0;
 
-    switch (_line[0]) {
+    switch (*_ch) {
     case '@': {
         token_kind = MjTokenKind::AT;
         push_state(MjLexerState::IN_ANNOTATION);
@@ -77,7 +78,7 @@ Error MjLexer::parse_token() noexcept {
         token_kind = MjTokenKind::COMMA;
         break;
     } case '$': {
-        if (_line[1] == '(') {
+        if (_ch[1] == '(') {
             token_kind = MjTokenKind::OPEN_PARENTHESIS;
             push_state(MjLexerState::IN_SUBSHELL);
         } else {
@@ -150,7 +151,7 @@ Error MjLexer::parse_token() noexcept {
     } case '!': {
         if (_state.in_type_expression()) {
             token_kind = MjTokenKind::NO_RETURN_TYPE_MODIFIER;
-        } else if (_line[1] == '=') {
+        } else if (_ch[1] == '=') {
             token_kind = MjTokenKind::NOT_EQUAL;
         } else {
             token_kind = MjTokenKind::NOT;
@@ -160,7 +161,7 @@ Error MjLexer::parse_token() noexcept {
     } case '*': {
         if (_state.in_type_expression()) {
             token_kind = MjTokenKind::POINTER_TYPE_MODIFIER;
-        } else if (_line[1] == '=') {
+        } else if (_ch[1] == '=') {
             token_kind = MjTokenKind::MULTIPLY_SET;
         } else {
             if (_has_trailing_whitespace) {
@@ -172,7 +173,7 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '/': {
-        if (_line[1] == '=') {
+        if (_ch[1] == '=') {
             token_kind = MjTokenKind::DIVIDE_SET;
         } else {
             token_kind = MjTokenKind::DIVIDE;
@@ -180,7 +181,7 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '%': {
-        if (_line[1] == '=') {
+        if (_ch[1] == '=') {
             token_kind = MjTokenKind::REMAINDER_SET;
         } else {
             token_kind = MjTokenKind::REMAINDER;
@@ -188,7 +189,7 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '+': {
-        if (_line[1] == '=') {
+        if (_ch[1] == '=') {
             token_kind = MjTokenKind::PLUS_SET;
         } else if (parse_numeric_literal().is_success()) {
             return Error::SUCCESS;
@@ -198,7 +199,7 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '-': {
-        if (_line[1] == '=') {
+        if (_ch[1] == '=') {
             token_kind = MjTokenKind::MINUS_SET;
         } else if (parse_numeric_literal().is_success()) {
             return Error::SUCCESS;
@@ -214,9 +215,9 @@ Error MjLexer::parse_token() noexcept {
     } case '&': {
         if (_state.in_type_expression()) {
             token_kind = MjTokenKind::REFERENCE_TYPE_MODIFIER;
-        } else if (_line[1] == '&') {
+        } else if (_ch[1] == '&') {
             token_kind = MjTokenKind::LOGICAL_AND;
-        } else if (_line[1] == '=') {
+        } else if (_ch[1] == '=') {
             token_kind = MjTokenKind::BITWISE_AND_SET;
         } else {
             token_kind = MjTokenKind::BITWISE_AND;
@@ -224,7 +225,7 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '^': {
-        if (_line[1] == '=') {
+        if (_ch[1] == '=') {
             token_kind = MjTokenKind::BITWISE_XOR_SET;
         } else {
             token_kind = MjTokenKind::BITWISE_XOR;
@@ -232,9 +233,9 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '|': {
-        if (_line[1] == '|') {
+        if (_ch[1] == '|') {
             token_kind = MjTokenKind::LOGICAL_OR;
-        } else if (_line[1] == '=') {
+        } else if (_ch[1] == '=') {
             token_kind = MjTokenKind::BITWISE_OR_SET;
         } else {
             token_kind = MjTokenKind::BITWISE_OR;
@@ -242,9 +243,9 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '=': {
-        if (_line[1] == '=') {
+        if (_ch[1] == '=') {
             token_kind = MjTokenKind::EQUAL;
-        } else if (_line[1] == '>') {
+        } else if (_ch[1] == '>') {
             token_kind = MjTokenKind::LAMBDA;
         } else {
             token_kind = MjTokenKind::SET;
@@ -252,7 +253,7 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case ':': {
-        if (_line[1] == ':') {
+        if (_ch[1] == ':') {
             token_kind = MjTokenKind::SCOPE;
         } else {
             token_kind = MjTokenKind::COLON;
@@ -260,14 +261,14 @@ Error MjLexer::parse_token() noexcept {
 
         break;
     } case '<': {
-        if (_line[1] == '<') {
-            if (_line[2] == '=') {
+        if (_ch[1] == '<') {
+            if (_ch[2] == '=') {
                 token_kind = MjTokenKind::LEFT_SHIFT_SET;
             } else {
                 token_kind = MjTokenKind::LEFT_SHIFT;
             }
-        } else if (_line[1] == '=') {
-            if (_line[2] == '>') {
+        } else if (_ch[1] == '=') {
+            if (_ch[2] == '>') {
                 token_kind = MjTokenKind::SPACESHIP;
             } else {
                 token_kind = MjTokenKind::LESS_THAN_OR_EQUAL;
@@ -286,33 +287,49 @@ Error MjLexer::parse_token() noexcept {
             } else {
                 error_message = "Unmatched angle bracket!";
             }
-        } else if (_line[1] == '>') {
-            if (_line[2] == '=') {
+        } else if (_ch[1] == '>') {
+            if (_ch[2] == '=') {
                 token_kind = MjTokenKind::RIGHT_SHIFT_SET;
             } else {
                 token_kind = MjTokenKind::RIGHT_SHIFT;
             }
-        } else if (_line[1] == '=') {
+        } else if (_ch[1] == '=') {
             token_kind = MjTokenKind::GREATER_THAN_OR_EQUAL;
         } else {
             token_kind = MjTokenKind::GREATER_THAN;
         }
 
         break;
+    } case '\'': {
+        u32 i = 1;
+        token_size = 1;
+
+        for (; _ch[i] != '\n' && _ch[i] != '\0'; ++i) {
+            if (_ch[i] == '\'') {
+                token_size = i;
+            }
+        }
+
+        if (token_size == 1) {
+            error("Unterminated raw string literal!");
+            token_kind = MjTokenKind::RAW_STRING_LITERAL;
+            token_size = i;
+        } else {
+            token_kind = MjTokenKind::RAW_STRING_LITERAL;
+        }
+
+        break;
     } case '"': {
         parse_interpolated_string_literal();
         return Error::SUCCESS;
-    } case '\'': {
-        parse_raw_string_literal();
-        return Error::SUCCESS;
-    }
-    }
-
-    if (token_kind == MjTokenKind::NONE) {
+    } default: {
         return Error::FAILURE;
     }
+    }
 
-    u32 token_size = token_kind.size();
+    if (token_size == 0) {
+        token_size = token_kind.size();
+    }
 
     if (token_kind.requires_leading_whitespace()) {
         // is binary operator or nested prefix operator
@@ -409,9 +426,9 @@ Error MjLexer::parse_shell_token() noexcept {
     StringView error_message;
     MjTokenKind token_kind = MjTokenKind::NONE;
 
-    switch (_line[0]) {
+    switch (*_ch) {
     case '-': {
-        if (_line[1] == '=') {
+        if (_ch[1] == '=') {
             token_kind = MjTokenKind::MINUS_SET;
             break;
         }
@@ -509,17 +526,17 @@ Error MjLexer::parse_identifier() noexcept {
     MjTokenKind token_kind = MjTokenKind::NONE;
     MjTokenKind trailing_token_type = MjTokenKind::NONE;
 
-    while (Ascii::is_lower(_line[token_size])) {
+    while (Ascii::is_lower(_ch[token_size])) {
         token_size += 1;
     }
 
-    if (_line[token_size] == ':' && _line[token_size + 1] == ':') {
+    if (_ch[token_size] == ':' && _ch[token_size + 1] == ':') {
         parse_text(MjTokenKind::MODULE_NAME, token_size);
         parse_text(MjTokenKind::SCOPE, 2);
         return Error::SUCCESS;
     }
 
-    StringView token_text = _line.head(token_size);
+    StringView token_text{_ch, token_size};
 
     static
     const StringView TYPE_NAMES[] = {
@@ -534,20 +551,20 @@ Error MjLexer::parse_identifier() noexcept {
         }
     }
 
-    if (_line[token_size] == '(') {
+    if (_ch[token_size] == '(') {
         parse_text(MjTokenKind::FUNCTION_NAME, token_size);
         parse_text(MjTokenKind::OPEN_PARENTHESIS);
         push_state(MjLexerState::IN_PARENTHESES);
         return Error::SUCCESS;
     }
 
-    if (_line[token_size] == '&') {
+    if (_ch[token_size] == '&') {
         parse_text(MjTokenKind::FUNCTION_NAME, token_size);
         parse_text(MjTokenKind::FUNCTION_REFERENCE, token_size);
         return Error::SUCCESS;
     }
 
-    if (_line[token_size] == '<') {
+    if (_ch[token_size] == '<') {
 
         // These keywords are safe to use as variable or function names, but they
         // may not be used as generic function names.
@@ -582,7 +599,7 @@ Error MjLexer::parse_identifier() noexcept {
         return Error::SUCCESS;
     }
 
-    if (_line[token_size] == ' ' && _line[token_size + 1] == '(') {
+    if (_ch[token_size] == ' ' && _ch[token_size + 1] == '(') {
         static
         const MjKeywordInfo KEYWORDS[] = {
             {"for", MjTokenKind::FOR},
@@ -607,9 +624,9 @@ Error MjLexer::parse_identifier() noexcept {
         return Error::SUCCESS;
     }
 
-    if (_line[token_size] == '&') {
+    if (_ch[token_size] == '&') {
         trailing_token_type = MjTokenKind::FUNCTION_REFERENCE;
-    } else if (Ascii::is_upper(_line[token_size]) || Ascii::is_digit(_line[token_size])) {
+    } else if (Ascii::is_upper(_ch[token_size]) || Ascii::is_digit(_ch[token_size])) {
 
         // These keywords are not safe to use as variable or function names.
         static
@@ -667,10 +684,10 @@ Error MjLexer::parse_identifier() noexcept {
 
         for (const MjKeywordInfo &info : SCOPED_KEYWORDS) {
             if (token_text == info.text) {
-                if (_line.starts_with(' ')) {
+                if (*_ch == ' ') {
                     skip_whitespace();
 
-                    if (_line.size() > 0 && (_line[0] == '{' || (_line[0] | 0x20u) - 'a' < 26 || _line[0] - '0' < 10 || _line[0] == '_')) {
+                    if (*_ch == '{' || (*_ch | 0x20u) - 'a' < 26 || *_ch - '0' < 10 || *_ch == '_') {
                         return Error::SUCCESS;
                     }
                 }
@@ -720,7 +737,7 @@ Error MjLexer::parse_identifier() noexcept {
     ///
 
 
-    if (token_text[0] == 'f' || token_text[0] == 'i' || token_text[0] == 'u') {
+    if (*token_text == 'f' || *token_text == 'i' || *token_text == 'u') {
         static
         const StringView NUMERIC_TYPE_NAMES[] = {
             "f128",
@@ -746,14 +763,12 @@ Error MjLexer::parse_identifier() noexcept {
             if (token_text == type_name) {
                 parse_text(MjTokenKind::TYPE_NAME, token_size);
 
-                if (token_size < _line.size()) {
-                    if (_line[token_size] == '<') {
-                        parse_text(MjTokenKind::OPEN_ANGLE_BRACKET);
-                        push_state(MjLexerState::IN_ANGLE_BRACKETS);
-                        parse_unit_expression();
-                    } else if (_line[token_size] == 'x') {
-                        ;
-                    }
+                if (_ch[token_size] == '<') {
+                    parse_text(MjTokenKind::OPEN_ANGLE_BRACKET);
+                    push_state(MjLexerState::IN_ANGLE_BRACKETS);
+                    parse_unit_expression();
+                } else if (_ch[token_size] == 'x') {
+                    ;
                 }
 
                 return Error::SUCCESS;
@@ -768,39 +783,37 @@ Error MjLexer::parse_identifier() noexcept {
 
 
     if (token_size == 0) {
-        while ((Ascii::is_digit(_line[token_size]) || _line[token_size] == '_')) {
+        while ((Ascii::is_digit(_ch[token_size]) || _ch[token_size] == '_')) {
             token_size += 1;
         }
     }
 
-    if (Ascii::is_upper(_line[token_size])) {
+    if (Ascii::is_upper(_ch[token_size])) {
         token_size += 1;
 
-        while ((Ascii::is_upper(_line[token_size]) || Ascii::is_digit(_line[token_size]) || _line[token_size] == '_')) {
+        while ((Ascii::is_upper(_ch[token_size]) || Ascii::is_digit(_ch[token_size]) || _ch[token_size] == '_')) {
             token_size += 1;
         }
 
-        if (Ascii::is_lower(_line[token_size])) {
+        if (Ascii::is_lower(_ch[token_size])) {
         }
 
         token_kind = token_size > 1 ? MjTokenKind::CONSTANT_NAME : MjTokenKind::TYPE_NAME;
-    } else if (Ascii::is_lower(_line[token_size])) {
+    } else if (Ascii::is_lower(_ch[token_size])) {
         token_size += 1;
 
-        while ((Ascii::is_lower(_line[token_size]) || Ascii::is_digit(_line[token_size]) || _line[token_size] == '_')) {
+        while ((Ascii::is_lower(_ch[token_size]) || Ascii::is_digit(_ch[token_size]) || _ch[token_size] == '_')) {
             token_size += 1;
         }
 
-        if (token_size < _line.size()) {
-            if (_line[token_size] == '(') {
-                trailing_token_type = MjTokenKind::OPEN_PARENTHESIS;
-                push_state(MjLexerState::IN_PARENTHESES);
-            } else if (_line[token_size] == '<') {
-                trailing_token_type = MjTokenKind::OPEN_ANGLE_BRACKET;
-                push_state(MjLexerState::IN_ANGLE_BRACKETS);
-            } else if (_line[token_size] == '&') {
-                trailing_token_type = MjTokenKind::FUNCTION_REFERENCE;
-            }
+        if (_ch[token_size] == '(') {
+            trailing_token_type = MjTokenKind::OPEN_PARENTHESIS;
+            push_state(MjLexerState::IN_PARENTHESES);
+        } else if (_ch[token_size] == '<') {
+            trailing_token_type = MjTokenKind::OPEN_ANGLE_BRACKET;
+            push_state(MjLexerState::IN_ANGLE_BRACKETS);
+        } else if (_ch[token_size] == '&') {
+            trailing_token_type = MjTokenKind::FUNCTION_REFERENCE;
         }
 
         if (trailing_token_type != MjTokenKind::NONE) {
@@ -816,23 +829,23 @@ Error MjLexer::parse_identifier() noexcept {
     /// Type Name - (?:[0-9][0-9.+-]*)?[A-Z][0-9A-Z+-]*[a-z][0-9A-Za-z.+-]*
     ///
 
-    if (Ascii::is_digit(_line[token_size])) {
+    if (Ascii::is_digit(_ch[token_size])) {
         token_size += 1;
 
-        while ((Ascii::is_digit(_line[token_size]) || _line[token_size] == '.' || _line[token_size] == '+' || _line[token_size] == '-')) {
+        while ((Ascii::is_digit(_ch[token_size]) || _ch[token_size] == '.' || _ch[token_size] == '+' || _ch[token_size] == '-')) {
             token_size += 1;
         }
     }
 
     // [A-Za-z0-9]
-    if (token_size >= _line.size() || !Ascii::is_alnum(_line[token_size])) {
+    if (!Ascii::is_alnum(_ch[token_size])) {
         return Error::FAILURE;
     }
 
     token_size += 1;
 
     // [A-Za-z0-9.+-]*
-    while ((Ascii::is_alnum(_line[token_size]) || _line[token_size] == '+' || _line[token_size] == '-' || _line[token_size] == '.')) {
+    while ((Ascii::is_alnum(_ch[token_size]) || _ch[token_size] == '+' || _ch[token_size] == '-' || _ch[token_size] == '.')) {
         token_size += 1;
     }
 
@@ -842,7 +855,7 @@ Error MjLexer::parse_identifier() noexcept {
     ///
 
     // (?=::)
-    if (token_size + 1 >= _line.size() || _line[token_size] != ':' || _line[token_size + 1] != ':') {
+    if (!(_ch[token_size] == ':' && _ch[token_size + 1] == ':')) {
         if (has_underscore) {
             token_kind = MjTokenKind::INVALID_MODULE_NAME;
         } else {
@@ -863,13 +876,9 @@ Error MjLexer::parse_identifier() noexcept {
 Error MjLexer::parse_numeric_literal() noexcept {
     skip_whitespace();
 
-    if (_at_eof) {
-        return Error::FAILURE;
-    }
-
     // Parse the sign.
     u32 token_size = 0;
-    bool has_sign = (_line[token_size] == '+' || _line[token_size] == '-');
+    bool has_sign = (_ch[token_size] == '+' || _ch[token_size] == '-');
 
     if (has_sign) {
         token_size += 1;
@@ -879,18 +888,18 @@ Error MjLexer::parse_numeric_literal() noexcept {
     u32 base = 10;
     MjTokenKind token_kind = MjTokenKind::I32_LITERAL;
 
-    if (_line[token_size] == '0') {
+    if (_ch[token_size] == '0') {
         token_size += 1;
 
-        if (_line[token_size] == 'x') {
+        if (_ch[token_size] == 'x') {
             token_size += 1;
             //token_kind = MjTokenKind::U32_LITERAL;
             base = 16;
-        } else if (_line[token_size] == 'o') {
+        } else if (_ch[token_size] == 'o') {
             token_size += 1;
             //token_kind = MjTokenKind::U32_LITERAL;
             base = 8;
-        } else if (_line[token_size] == 'b') {
+        } else if (_ch[token_size] == 'b') {
             token_size += 1;
             //token_kind = MjTokenKind::U32_LITERAL;
             base = 2;
@@ -903,43 +912,43 @@ Error MjLexer::parse_numeric_literal() noexcept {
     ///
 
     // Parse the integer portion.
-    while (Ascii::is_digit(_line[token_size])) {
+    while (Ascii::is_digit(_ch[token_size])) {
         token_size += 1;
     }
 
-    while (_line[token_size] == ',' && Ascii::is_digit(_line[token_size + 1])) {
+    while (_ch[token_size] == ',' && Ascii::is_digit(_ch[token_size + 1])) {
         token_size += 2;
 
-        while (Ascii::is_digit(_line[token_size])) {
+        while (Ascii::is_digit(_ch[token_size])) {
             token_size += 1;
         }
     }
 
-    if (token_size == 0 || !Ascii::is_digit(_line[token_size - 1])) {
+    if (token_size == 0 || !Ascii::is_digit(_ch[token_size - 1])) {
         return Error::FAILURE;
     }
 
     // Parse the fractional portion.
-    if (_line[token_size] == '.' && Ascii::is_digit(_line[token_size + 1])) {
+    if (_ch[token_size] == '.' && Ascii::is_digit(_ch[token_size + 1])) {
         token_size += 2;
         token_kind = MjTokenKind::F64_LITERAL;
 
-        while (Ascii::is_digit(_line[token_size])) {
+        while (Ascii::is_digit(_ch[token_size])) {
             token_size += 1;
         }
     }
 
     // Parse the exponent portion.
-    if (_line[token_size] == 'e') {
+    if (_ch[token_size] == 'e') {
         token_size += 1;
         token_kind = MjTokenKind::F64_LITERAL;
 
         // Parse the exponent sign.
-        if ((_line[token_size] == '+' || _line[token_size] == '-')) {
+        if ((_ch[token_size] == '+' || _ch[token_size] == '-')) {
             token_size += 1;
         }
 
-        while (Ascii::is_digit(_line[token_size])) {
+        while (Ascii::is_digit(_ch[token_size])) {
             token_size += 1;
         }
     }
@@ -950,43 +959,43 @@ Error MjLexer::parse_numeric_literal() noexcept {
     ///
 
     // Parse the integer portion.
-    while (Ascii::is_digit_upper(_line[token_size], base)) {
+    while (Ascii::is_digit_upper(_ch[token_size], base)) {
         token_size += 1;
     }
 
-    while (_line[token_size] == ',' && Ascii::is_digit_upper(_line[token_size + 1], base)) {
+    while (_ch[token_size] == ',' && Ascii::is_digit_upper(_ch[token_size + 1], base)) {
         token_size += 1;
 
-        if (Ascii::is_digit_upper(_line[token_size], base)) {
+        if (Ascii::is_digit_upper(_ch[token_size], base)) {
             token_size += 1;
         }
     }
 
-    if (token_size == 0 || !Ascii::is_digit_upper(_line[token_size - 1], base)) {
+    if (token_size == 0 || !Ascii::is_digit_upper(_ch[token_size - 1], base)) {
         return Error::FAILURE;
     }
 
     // Parse the fractional portion.
-    if ((base == 10 || base == 16) && _line[token_size] == '.') {
+    if ((base == 10 || base == 16) && _ch[token_size] == '.') {
         token_size += 1;
         token_kind = MjTokenKind::F64_LITERAL;
 
-        while (Ascii::is_digit_upper(_line[token_size], base)) {
+        while (Ascii::is_digit_upper(_ch[token_size], base)) {
             token_size += 1;
         }
     }
 
     // Parse the exponent portion.
-    if (((base == 10 && _line[token_size] == 'e') || (base == 16 && _line[token_size] == 'p'))) {
+    if (((base == 10 && _ch[token_size] == 'e') || (base == 16 && _ch[token_size] == 'p'))) {
         token_size += 1;
         token_kind = MjTokenKind::F64_LITERAL;
 
         // Parse the exponent sign.
-        if ((_line[token_size] == '+' || _line[token_size] == '-')) {
+        if ((_ch[token_size] == '+' || _ch[token_size] == '-')) {
             token_size += 1;
         }
 
-        while (Ascii::is_digit(_line[token_size])) {
+        while (Ascii::is_digit(_ch[token_size])) {
             token_size += 1;
         }
     }
@@ -994,7 +1003,7 @@ Error MjLexer::parse_numeric_literal() noexcept {
     // Parse the type suffix.
     u32 type_suffix_size = 0;
 
-    if (_line[token_size] == 'f' || _line[token_size] == 'i' || _line[token_size] == 'u') {
+    if (_ch[token_size] == 'f' || _ch[token_size] == 'i' || _ch[token_size] == 'u') {
         static
         const MjKeywordInfo NUMERIC_LITERAL_SUFFIXES[] = {
             {"f", MjTokenKind::F32_LITERAL},
@@ -1018,7 +1027,7 @@ Error MjLexer::parse_numeric_literal() noexcept {
         };
 
         for (const MjKeywordInfo &info : NUMERIC_LITERAL_SUFFIXES) {
-            if (_line.slice(token_size).starts_with(info.text)) {
+            if (info.text.starts_with(_ch)) {
                 type_suffix_size = info.text.size();
                 token_size += type_suffix_size;
                 token_kind = info.token_kind;
@@ -1041,7 +1050,7 @@ Error MjLexer::parse_numeric_literal() noexcept {
     }
 
     // Check for word boundary.
-    if ((Ascii::is_alnum(_line[token_size]) || _line[token_size] == '_')) {
+    if ((Ascii::is_alnum(_ch[token_size]) || _ch[token_size] == '_')) {
         return Error::FAILURE;
     }
 
@@ -1059,7 +1068,7 @@ Error MjLexer::parse_numeric_literal() noexcept {
         }
     }
 
-    if (!_line.is_empty() && _line[0] == ' ') {
+    if (*_ch == ' ') {
         // Unit expression has priority after a numeric literal.
         parse_unit_expression();
     }
@@ -1075,11 +1084,11 @@ Error MjLexer::parse_unit_expression() noexcept {
 
     // [A-Za-zµΩÅ°'"]|^g|1/
     while (true) {
-        if (token_size == _line.size()) {
+        if (!_ch[token_size]) {
             return Error::FAILURE;
         }
 
-        u32 value = _line[token_size];
+        u32 value = _ch[token_size];
 
         if (
             (value | 0x20u) - 'a' < 26 ||
@@ -1090,11 +1099,11 @@ Error MjLexer::parse_unit_expression() noexcept {
             break;
         }
 
-        if (token_size + 1 == _line.size()) {
+        if (!_ch[token_size + 1]) {
             return Error::FAILURE;
         }
 
-        value = (value << 8) | _line[token_size + 1];
+        value = (value << 8) | _ch[token_size + 1];
 
         if (
             value == (('^' << 8) | 'g') || // '^g'
@@ -1114,11 +1123,11 @@ Error MjLexer::parse_unit_expression() noexcept {
 
     // [A-Za-z0-9µΩÅ°'"⁰¹²³⁴⁵⁶⁷⁸⁹⁻⸍·^*/-]*
     while (true) {
-        if (token_size == _line.size()) {
+        if (!_ch[token_size]) {
             break;
         }
 
-        u32 value = _line[token_size];
+        u32 value = _ch[token_size];
 
         if (
             (value | 0x20u) - 'a' < 26 || value - '0' < 10 ||
@@ -1133,11 +1142,11 @@ Error MjLexer::parse_unit_expression() noexcept {
             continue;
         }
 
-        if (token_size + 1 == _line.size()) {
+        if (!_ch[token_size + 1]) {
             break;
         }
 
-        value = (value << 8) | _line[token_size + 1];
+        value = (value << 8) | _ch[token_size + 1];
 
         if (
             value == 0xC2B0u || // '°'
@@ -1153,11 +1162,11 @@ Error MjLexer::parse_unit_expression() noexcept {
             continue;
         }
 
-        if (token_size + 2u == _line.size()) {
+        if (!_ch[token_size + 2]) {
             break;
         }
 
-        value = (value << 8) | _line[token_size + 2];
+        value = (value << 8) | _ch[token_size + 2];
 
         if (
             value == 0xE281B0u || // '⁰'
@@ -1183,33 +1192,34 @@ Error MjLexer::parse_unit_expression() noexcept {
 
 
 Error MjLexer::parse_interpolated_string_literal() noexcept {
-    skip_whitespace();
+    _ch += 1;
+    //skip_whitespace();
 
-    if (_line[0] != '"') {
-        return Error::FAILURE;
-    }
+    //if (*_ch != '"') {
+    //    return Error::FAILURE;
+    //}
 
     std::vector<MjToken> escape_sequences;
     u32 token_size = 1;
     MjTokenKind token_kind = MjTokenKind::STRING_LITERAL;
 
-    while (_line[token_size] != '"') {
-        if (_line[token_size] == 0) {
+    while (_ch[token_size] != '"') {
+        if (_ch[token_size] == 0) {
             error("Unterminated string literal!");
             break;
         }
 
-        if (_line[token_size] == '\\') {
+        if (_ch[token_size] == '\\') {
             token_kind = MjTokenKind::INTERPOLATED_STRING_LITERAL;
             token_size += 1;
 
-            if (token_size == _line.size()) {
+            if (!_ch[token_size]) {
                 break;
             }
 
-            MjToken escape_sequence = MjToken(MjTokenKind::CHARACTER_ESCAPE_SEQUENCE, _line_index, _file.line(_line_index).size() - _line.size(), 2);
+            MjToken escape_sequence{MjTokenKind::CHARACTER_ESCAPE_SEQUENCE, _line_index, _token_offset, 2};
 
-            switch (_line[token_size]) {
+            switch (_ch[token_size]) {
             case '\\': // '\\'
             case '"': // '\"'
             case 'e': // '\e'
@@ -1220,7 +1230,7 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
                 break;
             case 'o': { // '\o377'
                 for (u32 n = token_size + 3; token_size < n; token_size++) {
-                    if (token_size == _line.size() || !Ascii::is_octal(_line[token_size])) {
+                    if (!Ascii::is_octal(_ch[token_size])) {
                         escape_sequence.kind = MjTokenKind::INVALID_ESCAPE_SEQUENCE;
                         escape_sequence.size = token_size;
                         error(escape_sequence, "Invalid string escape sequence! '\\o' requires 3 octal digits!");
@@ -1228,7 +1238,7 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
                     }
                 }
 
-                if (_line[token_size - 3] > '3') {
+                if (_ch[token_size - 3] > '3') {
                     escape_sequence.kind = MjTokenKind::INVALID_ESCAPE_SEQUENCE;
                     escape_sequence.size = 5;
                     error(escape_sequence, "Invalid string escape sequence! Max value is \"\\o377\"!");
@@ -1237,7 +1247,7 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
                 break;
             } case 'x': { // '\x7F'
                 for (u32 n = token_size + 2; token_size < n; token_size++) {
-                    if (token_size == _line.size() || !Ascii::is_hex_digit(_line[token_size])) {
+                    if (!Ascii::is_hex_digit(_ch[token_size])) {
                         escape_sequence.kind = MjTokenKind::INVALID_ESCAPE_SEQUENCE;
                         escape_sequence.size = token_size;
                         error(escape_sequence, "Invalid string escape sequence! '\\x' requires 2 hexadecimal digits!");
@@ -1245,7 +1255,7 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
                     }
                 }
 
-                if (_line[token_size - 2] > '7') {
+                if (_ch[token_size - 2] > '7') {
                     escape_sequence.kind = MjTokenKind::INVALID_ESCAPE_SEQUENCE;
                     escape_sequence.size = 4;
                     error(escape_sequence, "Invalid string escape sequence! Max value is \"\\x7F\"!");
@@ -1254,7 +1264,7 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
                 break;
             } case 'u': { // '\uFFFF'
                 for (u32 n = token_size + 4; token_size < n; token_size++) {
-                    if (token_size == _line.size() || !Ascii::is_hex_digit(_line[token_size])) {
+                    if (!Ascii::is_hex_digit(_ch[token_size])) {
                         escape_sequence.kind = MjTokenKind::INVALID_ESCAPE_SEQUENCE;
                         escape_sequence.size = token_size;
                         error(escape_sequence, "Invalid Unicode string escape sequence! '\\u' requires 4 hexadecimal digits!");
@@ -1265,7 +1275,7 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
                 break;
             } case 'U': { // '\U10FFFF'
                 for (u32 n = token_size + 6; token_size < n; token_size++) {
-                    if (token_size == _line.size() || !Ascii::is_hex_digit(_line[token_size])) {
+                    if (!Ascii::is_hex_digit(_ch[token_size])) {
                         escape_sequence.kind = MjTokenKind::INVALID_ESCAPE_SEQUENCE;
                         escape_sequence.size = token_size;
                         error(escape_sequence, "Invalid Unicode string escape sequence! '\\U' requires 6 hexadecimal digits!");
@@ -1273,7 +1283,7 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
                     }
                 }
 
-                if (_line[token_size - 6] > '1' || (_line[token_size - 6] == '1' && _line[token_size - 5] > '0')) {
+                if (_ch[token_size - 6] > '1' || (_ch[token_size - 6] == '1' && _ch[token_size - 5] > '0')) {
                     escape_sequence.kind = MjTokenKind::INVALID_ESCAPE_SEQUENCE;
                     escape_sequence.size = 8;
                     error(escape_sequence, "Invalid string escape sequence! Max value is \"\\U10FFFF\"!");
@@ -1302,33 +1312,13 @@ Error MjLexer::parse_interpolated_string_literal() noexcept {
 }
 
 
-Error MjLexer::parse_raw_string_literal() noexcept {
-    skip_whitespace();
-
-    if (_line[0] != '\'') {
-        return Error::FAILURE;
-    }
-
-    u32 token_size = _line.size();
-    while (_line[--token_size] != '\'');
-
-    if (token_size == 0) {
-        error("Unterminated raw string literal!");
-        return Error::FAILURE;
-    }
-
-    parse_text(MjTokenKind::RAW_STRING_LITERAL, token_size);
-    return Error::SUCCESS;
-}
-
-
 ///
 /// Text Parsing
 ///
 
 
 Error MjLexer::parse_text(StringView string, MjTokenKind token_kind) noexcept {
-    if (!_line.starts_with(string)) {
+    if (!string.starts_with(_ch)) {
         return Error::FAILURE;
     }
 
@@ -1338,7 +1328,7 @@ Error MjLexer::parse_text(StringView string, MjTokenKind token_kind) noexcept {
 
 
 Error MjLexer::parse_text(u8 ch, MjTokenKind token_kind) noexcept {
-    if (!_line.starts_with(ch)) {
+    if (*_ch != ch) {
         return Error::FAILURE;
     }
 
@@ -1348,25 +1338,18 @@ Error MjLexer::parse_text(u8 ch, MjTokenKind token_kind) noexcept {
 
 
 void MjLexer::parse_text(MjTokenKind kind, u32 size) noexcept {
-    if (kind != MjTokenKind::INDENT) {
-        printf("%.*s # %u\n", size, _line.data(), static_cast<u32>(kind));
-    }
-
-    _file.tokens().emplace_back(kind, _line_index, _file.line(_line_index).size() - _line.size(), size);
-    _line += size;
+    _file.append_token(kind, _line_index, _token_offset, size);
+    _ch += size;
 }
 
 
 void MjLexer::append_token(MjToken token) noexcept {
-    printf("%.*s # %u\n", token.size, _file.line(token.line).data() + token.offset, static_cast<u32>(token.kind));
-    _file.tokens().push_back(token);
+    _file.append_token(token);
 }
 
 
 void MjLexer::append_subtoken(MjTokenKind kind, u32 offset, u32 size) noexcept {
-    const MjToken &token = _file.tokens().back();
-    printf("%.*s # %u\n", size, _file.line(token.line).data() + token.offset + offset, static_cast<u32>(kind));
-    _file.tokens().emplace_back(kind, token.line, token.offset + offset, size);
+    _file.append_subtoken(kind, offset, size);
 }
 
 
@@ -1376,75 +1359,53 @@ void MjLexer::append_subtoken(MjTokenKind kind, u32 offset, u32 size) noexcept {
 
 
 void MjLexer::skip_whitespace() noexcept {
-    if (_at_eof) {
-        return;
+    for (; *_ch == ' '; ++_ch);
+
+    if (parse_newline()) {
+        parse_indent();
+    } else {
+        _has_leading_whitespace = _ch[-1] == ' ';
     }
-
-    for (u32 i = 0; i < _line.size(); ++i) {
-        if (_line[i] != ' ') {
-            _has_leading_whitespace = i > 0;
-
-            if (_has_leading_whitespace) {
-                _line += i;
-
-                if (_state.in_type_expression()) {
-                    clear_state(MjLexerState::IN_TYPE_EXPRESSION);
-                }
-            }
-
-            return;
-        }
-    }
-
-    move_to_next_line();
-    parse_indent();
 }
 
 
 void MjLexer::parse_indent() noexcept {
-    while (!_at_eof) {
-        for (u32 i = 0; i < _line.size(); ++i) {
-            if (_line[i] != ' ') {
-                _last_indent = _line_indent;
-                _line_indent = i / INDENT_WIDTH;
-                parse_text(MjTokenKind::INDENT, _line_indent);
-                _line += i % INDENT_WIDTH;
+    const u8 *ch = _ch;
+    u32 indent_size = 0;
 
-                // Reset line dependent parsing states.
-                _has_leading_whitespace = true;
+    do {
+        for (ch = _ch; *_ch == ' '; ++_ch);
+    } while (parse_newline());
 
-                if (_state.in_annotation()) {
-                    pop_state();
-                }
+    u32 indent_size = _ch - ch;
+    _last_indent = _line_indent;
+    _line_indent = indent_size / INDENT_WIDTH;
+    parse_text(MjTokenKind::INDENT, _line_indent);
+    _ch += indent_size % INDENT_WIDTH;
 
-                if (_state.in_shell()) {
-                    pop_state();
-                }
+    // Reset line dependent parsing states.
+    _has_leading_whitespace = true;
 
-                return;
-            }
-        }
-
-        move_to_next_line();
+    if (_state.in_annotation() || _state.in_shell()) {
+        pop_state();
     }
 }
 
 
-void MjLexer::move_to_next_line() noexcept {
-    if (_at_eof) {
-        return;
+bool MjLexer::parse_newline() noexcept {
+    if (*_ch != '\n') {
+        return false;
     }
 
+    _file.append_line(_ch - _file.line(_line_index).data());
     _line_index += 1;
 
-    if (_line_index == _file.line_count()) {
-        _at_eof = true;
-        _line = nullptr;
-        return;
+    if (!*_ch) {
+        return false;
     }
 
-    printf("line: %u\n", _line_index + 1);
-    _line = _file.line(_line_index);
+    _ch += 1;
+    return true;
 }
 
 
@@ -1454,11 +1415,12 @@ void MjLexer::move_to_next_line() noexcept {
 
 
 void MjLexer::error(const MjToken &token, StringView message) noexcept {
-    printf("%s:%u:%u: \x1B[31merror:\x1B[m ",
-        _file.file_path().c_str(), token.line + 1, token.offset
-    );
-    printf("%.*s\n", message.size(), message.data());
-    printf("\x1B[35m%*.*s\x1B[m",
+    printf(
+        "%s:%u:%u: \x1B[31;1mError:\x1B[m %.*s\n"
+        "%.*s\n"
+        "\x1B[35;1m%*.*s\x1B[m\n",
+        _file.file_path().c_str(), token.line + 1, token.offset, message.size(), message.data(),
+        _file.line(token.line).size(), _file.line(token.line).data(),
         token.offset, token.size, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     );
 }

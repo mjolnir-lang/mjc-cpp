@@ -18,14 +18,14 @@
 class MjLexer {
 private:
     MjFile &_file;
-    StringView _line;
+    const u8 *_ch;
     u32 _line_index = 0;
+    u32 _token_offset = 0;
     u8 _line_indent = 0;
     u8 _last_indent = 0;
     std::stack<MjLexerState> _states;
     MjLexerState _state = MjLexerState::NONE;
     bool _emit_subtokens;
-    bool _at_eof;
     bool _has_leading_whitespace;
     bool _has_trailing_whitespace;
 
@@ -102,10 +102,6 @@ private:
     Error parse_interpolated_string_literal() noexcept;
 
 
-    /// Attempt to parse the next token as either a raw or an interpolated string.
-    Error parse_raw_string_literal() noexcept;
-
-
     ///
     /// Text Parsing
     ///
@@ -130,7 +126,7 @@ private:
 
 
     Error peek_text(StringView string) const noexcept {
-        if (!_line.starts_with(string)) {
+        if (!string.starts_with(_ch)) {
             return Error::FAILURE;
         }
 
@@ -139,7 +135,7 @@ private:
 
 
     Error peek_text(u8 ch) const noexcept {
-        if (!_line.starts_with(ch)) {
+        if (*_ch != ch) {
             return Error::FAILURE;
         }
 
@@ -161,7 +157,7 @@ private:
 
 
     /// @brief Move the parser to the next line.
-    void move_to_next_line() noexcept;
+    bool parse_newline() noexcept;
 
 
     ///

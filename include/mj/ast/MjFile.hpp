@@ -22,6 +22,11 @@ public:
     Error load(std::filesystem::path path) noexcept;
 
 
+    ///
+    /// Properties
+    ///
+
+
     constexpr
     const std::vector<MjToken> &tokens() const noexcept {
         return _tokens;
@@ -85,4 +90,27 @@ public:
     StringView text_of(const MjToken &token) const noexcept {
         return StringView(&_strings[token.offset], token.size);
     }
+
+
+    ///
+    /// Methods
+    ///
+
+
+    void append_line(u32 line_offset) noexcept {
+        _line_offsets.push_back(line_offset);
+    }
+
+
+    template<class... Args>
+    void append_token(Args &&... args) noexcept {
+        _tokens.emplace_back(std::forward<Args>(args)...);
+    }
+
+
+    void append_subtoken(MjTokenKind kind, u32 offset, u32 size) noexcept {
+        const MjToken &token = _tokens.back();
+        _tokens.emplace_back(kind, token.line, token.offset + offset, size);
+    }
+
 };
