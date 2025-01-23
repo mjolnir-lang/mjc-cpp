@@ -3,6 +3,8 @@
 #include <mj/ast/MjType.hpp>
 #include <mj/ast/MjTemplate.hpp>
 #include <mj/ast/MjFunction.hpp>
+#include <mj/MjStringSet.hpp>
+
 #include <filesystem/File.hpp>
 
 
@@ -19,6 +21,7 @@ private:
     Vector<MjType *> _types;         // Defined types
     Vector<MjTemplate *> _templates; // Defined templates (generic types)
     Vector<MjFunction *> _functions; // Defined functions
+    MjStringSet strings; // The short strings shared by all files in the module.
 public:
 
 

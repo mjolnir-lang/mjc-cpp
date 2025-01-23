@@ -9,6 +9,7 @@ set(sources
     src/mj/MjLexer.cpp
     src/mjc/main.cpp
 )
+#file(GLOB_RECURSE sources src/test.cpp include/*.hpp)
 
 add_executable(mjc ${sources})
 target_compile_options(mjc PUBLIC -std=c++23 -O2 -Wall -Wextra -pedantic -funsigned-char)

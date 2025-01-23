@@ -38,7 +38,7 @@ private:
     const MjFile &_file;
     Vector<MjParseError> _errors;
     MjProgram _program;
-    const MjToken *_token;
+    MjToken _token;
 public:
 
 
@@ -51,7 +51,7 @@ private:
 
     MjParser(const MjFile &file) noexcept :
         _file(file),
-        _token(&_file.tokens()[0])
+        _token(_file.tokens().data())
     {}
 
 
@@ -63,7 +63,7 @@ private:
     ///
 
 
-    void reset(const MjToken *token) noexcept {
+    void reset(MjToken token) noexcept {
         _token = token;
     }
 
@@ -74,40 +74,40 @@ private:
 
 
     StringView token_text() noexcept {
-        return _file.line(_token->line).slice(_token->offset, _token->size);
+        return nullptr;//_file.line(_token->line).slice(_token->offset, _token->size);
     }
 
 
-    const MjToken *peek_token() noexcept {
+    MjToken peek_token() noexcept {
         return _token + 1;
     }
 
 
-    const MjToken *peek_token(MjTokenKind type) noexcept {
-        const MjToken *token = _token + 1;
-        return token->kind == type ? token : nullptr;
+    MjToken peek_token(MjTokenKind type) noexcept {
+        MjToken token = _token + 1;
+        return token.kind() == type ? token : nullptr;
     }
 
 
-    const MjToken *parse_token() noexcept {
+    MjToken parse_token() noexcept {
         return _token;
     }
 
 
-    const MjToken *parse_token(MjTokenKind type) noexcept {
-        return _token->kind == type ? _token : nullptr;
+    MjToken parse_token(MjTokenKind type) noexcept {
+        return _token.kind() == type ? _token : nullptr;
     }
 
 
     constexpr
     bool match_token(MjTokenKind type) const noexcept {
-        return _token->kind == type;
+        return _token.kind() == type;
     }
 
 
     constexpr
-    Slice<const MjToken> tokens_since(const MjToken *start) const noexcept {
-        return Slice<const MjToken>(start, u32(_token - start));
+    Slice<MjToken> tokens_since(MjToken start) const noexcept {
+        return Slice<MjToken>(start, u32(_token - start));
     }
 
 

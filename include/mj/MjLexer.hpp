@@ -7,7 +7,6 @@
 #include <vector>
 #include <stack>
 #include <filesystem>
-#include <fstream>
 
 
 /// The MjLexer parses a Mjolnir source file into a stream of tokens.
@@ -17,30 +16,47 @@
 /// contexts by tracking state and indentation.
 class MjLexer {
 private:
-    MjFile &_file;
+    std::vector<u16> _string_ids; // The string IDs referenced in this file. (used for symbol lookup and removal)
+    std::vector<u8> _data;
     const u8 *_ch;
+
+    MjFile &_file;
+
+    std::vector<MjLexerError> _errors;
+
     u32 _line_index = 0;
     u32 _token_offset = 0;
     u8 _line_indent = 0;
     u8 _last_indent = 0;
+
     std::stack<MjLexerState> _states;
     MjLexerState _state = MjLexerState::NONE;
     bool _emit_subtokens;
     bool _has_leading_whitespace;
     bool _has_trailing_whitespace;
+    bool _skip_comments;
 
     static constexpr u32 INDENT_WIDTH = 4;
 public:
 
 
     static
-    MjFile *parse_file(std::filesystem::path path, bool emit_subtokens = false) noexcept;
+    MjFile *parse_file(std::filesystem::path file_path, bool emit_subtokens = false) noexcept;
 
 
 private:
 
 
-    constexpr
+    /// Load the file data into the internal buffer and append a null byte which will act as a
+    /// sentinel value for detecting and handling the end of the file by failing to satisfy all
+    /// parse rules.
+    static
+    std::vector<u8> load_file_data(std::filesystem::path file_path) noexcept;
+
+
+private:
+
+
     MjLexer(MjFile &file, bool emit_subtokens = false) noexcept :
         _file(file),
         _emit_subtokens(emit_subtokens)
@@ -54,7 +70,7 @@ private:
 
     /// @brief Parse any token.
     /// @return The type of token was parsed.
-    MjToken *token() noexcept {
+    MjToken token() noexcept {
         return &_file.tokens().back();
     }
 
@@ -73,7 +89,7 @@ private:
     Error parse_token(MjTokenKind token_kind) noexcept;
 
 
-    /// Parse the nest token or group of associated tokens.
+    /// Parse the next token or sequence of associated tokens.
     Error parse_token() noexcept;
 
 
@@ -89,6 +105,13 @@ private:
     /// Parse an identifier. Either a keyword, function, type, constant, module, literal, or variable.
     Error parse_identifier() noexcept;
 
+    Error parse_keyword() noexcept;
+
+    Error parse_module_name(StringView token_text) noexcept;
+
+    // Parse a user-defined type name. (Will not check for keywords)
+    Error parse_type_name() noexcept;
+
 
     /// Parse a numeric literal.
     Error parse_numeric_literal() noexcept;
@@ -103,61 +126,34 @@ private:
 
 
     ///
-    /// Text Parsing
-    ///
-
-
-    Error parse_text(StringView string, MjTokenKind token_kind) noexcept;
-
-
-    Error parse_text(u8 ch, MjTokenKind token_kind) noexcept;
-
-
-    /// @brief Parse a token of the given kind with the given size.
-    void parse_text(MjTokenKind kind, u32 size = 1) noexcept;
-
-
-    void append_token(MjToken token) noexcept;
-
-
-    /// @brief Parse a sub-token of the given kind at the given offset and size within the preceding
-    /// token.
-    void append_subtoken(MjTokenKind kind, u32 offset, u32 size = 1) noexcept;
-
-
-    Error peek_text(StringView string) const noexcept {
-        if (!string.starts_with(_ch)) {
-            return Error::FAILURE;
-        }
-
-        return Error::SUCCESS;
-    }
-
-
-    Error peek_text(u8 ch) const noexcept {
-        if (*_ch != ch) {
-            return Error::FAILURE;
-        }
-
-        return Error::SUCCESS;
-    }
-
-
-    ///
     /// Line Control and Whitespace Parsing
     ///
 
 
-    /// @brief Skip all leading whitespace characters, moving to the next non-empty line.
-    void skip_whitespace() noexcept;
+    /// Skip all leading whitespace characters, moving to the next non-empty line.
+    ///
+    /// The fast path is to parse zero or one space characters.
+    /// Any whitespaces not implicitly encoded by relative whitespace rules are represented by a whitespace token.
+    /// The whitespace token is ignored by all token stream processing operations, and only serves to encode
+    /// The offset of subsequent tokens within the source line.
+    /// spaces at the end of a line are not stored in the token stream.
+    /// Whitespace tokens and empty line tokens can be omitted, but the resulting token stream would not
+    /// be an accurate representation of all token source locations.
+    void parse_whitespace() noexcept;
 
 
-    /// @brief Parse the indentation of the current line, skipping empty lines.
+    /// Parse the indentation of the current line, skipping empty lines.
     void parse_indent() noexcept;
 
 
-    /// @brief Move the parser to the next line.
+    /// Move the parser to the next line.
     bool parse_newline() noexcept;
+
+
+    /// Return true if the end of the file has been reached.
+    bool is_eof() const noexcept {
+        return !*_ch;
+    }
 
 
     ///
@@ -212,10 +208,10 @@ private:
     ///
 
 
-    void error(const MjToken &token, StringView message) noexcept;
+    void error(MjToken token, StringView message) noexcept;
 
 
     void error(StringView message) noexcept {
-        error(*token(), message);
+        error(token(), message);
     }
 };

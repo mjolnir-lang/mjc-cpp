@@ -27,9 +27,7 @@ void MjParser::error(StringView message) noexcept {
 
 MjProgram MjParser::parse(const MjFile &file) noexcept {
     MjProgram program{file};
-
     program.parse_module();
-
     return program;
 }
 
@@ -114,7 +112,7 @@ MjStatement *MjParser::parse_statement() noexcept {
     const MjToken *start = _token;
     MjStatement *statement = nullptr;
 
-    switch (_token->kind) {
+    switch (_token->kind()) {
     case MjTokenKind::OPEN_CURLY_BRACE: {
         MjBlockStatement *statement = new MjBlockStatement();
 
@@ -399,7 +397,7 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     MjExpression *lhs = nullptr;
     const MjToken *start = _token;
 
-    switch (_token->kind) {
+    switch (_token->kind()) {
 
     case MjTokenKind::OPEN_CAST: {
         parse_token();
@@ -412,7 +410,7 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     case MjTokenKind::TYPE_NAME: {
         MjType *type = parse_type();
 
-        switch (_token->kind) {
+        switch (_token->kind()) {
         case MjTokenKind::OPEN_PARENTHESIS: {
             MjFunctionParameterList *fpl = parse_function_parameter_list();
             lhs = new MjExpression(tokens_since(start), type, fpl);
@@ -434,7 +432,7 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     case MjTokenKind::MODULE_NAME: {
         MjType *type = parse_type();
 
-        switch (_token->kind) {
+        switch (_token->kind()) {
         case MjTokenKind::SCOPE: {
             lhs = new MjExpression(tokens_since(start), type);
             break;
@@ -518,16 +516,16 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
 
     // 
     while (true) {
-        if (_token->kind == MjTokenKind::NONE) {
+        if (_token->kind() == MjTokenKind::NONE) {
             break;
         }
 
-        if (!_token->kind.is_operator()) {
+        if (!_token->kind().is_operator()) {
             error("Expected an operator!");
             return nullptr;
         }
 
-        MjOperatorType op = MjOperatorType::MULTIPLICATION;
+        MjOperatorKind op = MjOperatorKind::MULTIPLICATION;
 
         if (op.left_bp() < min_bp) {
             break;
@@ -908,13 +906,13 @@ MjClassType *MjParser::parse_class_type_definition() noexcept {
     while (true) {
         const MjToken *token = peek_token();
 
-        if (token->kind == MjTokenKind::CLOSE_CURLY_BRACE) {
+        if (token->kind() == MjTokenKind::CLOSE_CURLY_BRACE) {
             break;
-        } else if (token->kind == MjTokenKind::SHARED) {
+        } else if (token->kind() == MjTokenKind::SHARED) {
             ;
-        } else if (token->kind == MjTokenKind::IMPLEMENTS) {
+        } else if (token->kind() == MjTokenKind::IMPLEMENTS) {
             ;
-        } else if (token->kind == MjTokenKind::TYPE) {
+        } else if (token->kind() == MjTokenKind::TYPE) {
             next_token();
             typevar = parse_variable();
             types.append(MjType(typevar.name, ));
@@ -930,9 +928,9 @@ MjClassType *MjParser::parse_class_type_definition() noexcept {
                     while (depth) {
                         token = next_token();
 
-                        if (token == MjToken::OPEN_CURLY_BRACE) {
+                        if (token->kind() == MjTokenKind::OPEN_CURLY_BRACE) {
                             depth += 1;
-                        } else if (token == MjToken::OPEN_CURLY_BRACE) {
+                        } else if (token->kind() == MjTokenKind::OPEN_CURLY_BRACE) {
                             depth -= 1;
                         }
 
@@ -1026,7 +1024,7 @@ void MjParser::parse_variant_type_definition(MjType &type) {
 MjComment *MjParser::parse_comment() {
     bool is_formatted = false;
 
-    switch (_token->kind) {
+    switch (_token->kind()) {
     case MjTokenKind::FORMATTED_LINE_COMMENT:
         is_formatted = true;
         // fallthrough

@@ -4,195 +4,274 @@
 #include <core/StringView.hpp>
 
 
-template<class MjTokenKind>
-struct MjTokenKindValues {
-
-    // Misc
-    static constexpr MjTokenKind NONE{0}; // 
-    static constexpr MjTokenKind INDENT{1}; // [ \t]+
-    static constexpr MjTokenKind WHITESPACE{2}; // [ \t]+
-
-    // Operators
-    static constexpr MjTokenKind AT{3};                    // @
-    static constexpr MjTokenKind LAMBDA{4};                // a => b
-
-    // Reference Operators
-    static constexpr MjTokenKind DEREFERENCE{5};           // *a
-    static constexpr MjTokenKind NULLABLE_POINTER{6};      // ^a
-    static constexpr MjTokenKind REFERENCE{7};             // &a
-    static constexpr MjTokenKind FUNCTION_REFERENCE{8};    // f&
-
-    // Lifetime Operators
-    //static constexpr MjTokenKind GLOBAL_LIFETIME{8};       // "
-    //static constexpr MjTokenKind LOCAL_LIFETIME{9};        // '
-
-    // Arithmetic Operators
-    static constexpr MjTokenKind INVERT{10};                // ~a
-    static constexpr MjTokenKind NEGATE{11};                // -a
-    static constexpr MjTokenKind INCREMENT{12};             // a++
-    static constexpr MjTokenKind DECREMENT{13};             // a--
-    static constexpr MjTokenKind SET{14};                   // a = b
-    static constexpr MjTokenKind RIGHT_SHIFT{15};           // a >> b
-    static constexpr MjTokenKind RIGHT_SHIFT_SET{16};       // a >>= b
-    static constexpr MjTokenKind LEFT_SHIFT{17};            // a << b
-    static constexpr MjTokenKind LEFT_SHIFT_SET{18};        // a <<= b
-    static constexpr MjTokenKind MULTIPLY{19};              // a * b
-    static constexpr MjTokenKind MULTIPLY_SET{20};          // a *= b
-    static constexpr MjTokenKind DIVIDE{21};                // a / b
-    static constexpr MjTokenKind DIVIDE_SET{22};            // a /= b
-    static constexpr MjTokenKind REMAINDER{23};             // a % b
-    static constexpr MjTokenKind REMAINDER_SET{24};         // a %= b
-    static constexpr MjTokenKind PLUS{25};                  // a + b
-    static constexpr MjTokenKind PLUS_SET{26};              // a += b
-    static constexpr MjTokenKind MINUS{27};                 // a - b
-    static constexpr MjTokenKind MINUS_SET{28};             // a -= b
-    static constexpr MjTokenKind BITWISE_AND{29};           // a & b
-    static constexpr MjTokenKind BITWISE_AND_SET{30};       // a &= b
-    static constexpr MjTokenKind BITWISE_OR{31};            // a | b
-    static constexpr MjTokenKind BITWISE_OR_SET{32};        // a |= b
-    static constexpr MjTokenKind BITWISE_XOR{33};           // a ^ b
-    static constexpr MjTokenKind BITWISE_XOR_SET{34};       // a ^= b
-    static constexpr MjTokenKind LOGICAL_AND{35};           // a && b
-    static constexpr MjTokenKind LOGICAL_OR{37};            // a || b
-
-    // Relational Operators
-    static constexpr MjTokenKind NOT{41};                   // !a
-    static constexpr MjTokenKind EQUAL{42};                 // a == b
-    static constexpr MjTokenKind NOT_EQUAL{43};             // a != b
-    static constexpr MjTokenKind SPACESHIP{44};             // a <=> b
-    static constexpr MjTokenKind LESS_THAN{45};             // a < b
-    static constexpr MjTokenKind LESS_THAN_OR_EQUAL{46};    // a <= b
-    static constexpr MjTokenKind GREATER_THAN{47};          // a > b
-    static constexpr MjTokenKind GREATER_THAN_OR_EQUAL{48}; // a >= b
-
-    // Separators
-    static constexpr MjTokenKind SCOPE{49};                 // T::m
-    static constexpr MjTokenKind DOT{50};                   // a.m
-    static constexpr MjTokenKind COMMA{51};                 // ,
-    static constexpr MjTokenKind SEMICOLON{52};             // ;
-    static constexpr MjTokenKind COLON{53};                 // :
-    static constexpr MjTokenKind QUESTION{54};              // a ? b
-    static constexpr MjTokenKind HASH{55};                  // #
-    static constexpr MjTokenKind DOLLAR_SIGN{56};           // $
-    static constexpr MjTokenKind SHELL_COMMAND{57};         // [A-Za-z][A-Za-z0-9/:_-]
-    static constexpr MjTokenKind SHELL_OPTION{58};          // -[A-Za-z][A-Za-z0-9_-]
-
-    static constexpr MjTokenKind OPEN_CAST{156};     // (
-    static constexpr MjTokenKind CLOSE_CAST{157};    // )
-    static constexpr MjTokenKind OPEN_TYPE{158};     // (
-    static constexpr MjTokenKind CLOSE_TYPE{159};    // )
-    static constexpr MjTokenKind OPEN_PARENTHESIS{56};     // (
-    static constexpr MjTokenKind CLOSE_PARENTHESIS{57};    // )
-    static constexpr MjTokenKind OPEN_SQUARE_BRACKET{58};  // [
-    static constexpr MjTokenKind CLOSE_SQUARE_BRACKET{59}; // ]
-    static constexpr MjTokenKind OPEN_CURLY_BRACE{60};     // {
-    static constexpr MjTokenKind CLOSE_CURLY_BRACE{61};    // }
-    static constexpr MjTokenKind OPEN_ANGLE_BRACKET{62};   // <
-    static constexpr MjTokenKind CLOSE_ANGLE_BRACKET{63};  // >
-
-    // Keywords
-    static constexpr MjTokenKind AS{64};         // as
-    static constexpr MjTokenKind ASM{65};        // asm
-    static constexpr MjTokenKind BREAK{66};      // break
-    static constexpr MjTokenKind BITFIELD{67};   // bitfield
-    static constexpr MjTokenKind CLASS{68};      // class
-    static constexpr MjTokenKind CONTINUE{69};   // continue
-    static constexpr MjTokenKind DO{70};         // do
-    static constexpr MjTokenKind ELSE{71};       // else
-    static constexpr MjTokenKind ENUM{72};       // enum
-    static constexpr MjTokenKind FAIL{73};       // fail
-    static constexpr MjTokenKind FOR{74};        // for
-    static constexpr MjTokenKind IF{75};         // if
-    static constexpr MjTokenKind IMPL{76};       // impl
-    static constexpr MjTokenKind IMPORT{77};     // import
-    static constexpr MjTokenKind IN{78};         // in
-    static constexpr MjTokenKind INTERFACE{79};  // interface
-    static constexpr MjTokenKind IS{80};         // is
-    static constexpr MjTokenKind LOOP{81};       // loop
-    static constexpr MjTokenKind MATCH{82};      // match
-    static constexpr MjTokenKind RETURN{83};     // return
-    static constexpr MjTokenKind STRUCT{84};     // struct
-    static constexpr MjTokenKind TYPE{85};       // type
-    static constexpr MjTokenKind UNION{86};      // union
-    static constexpr MjTokenKind UNIT{87};       // unit
-    static constexpr MjTokenKind UNTIL{88};      // until
-    static constexpr MjTokenKind VARIANT{89};    // variant
-    static constexpr MjTokenKind WHERE{90};      // where
-    static constexpr MjTokenKind WHILE{91};      // while
-    static constexpr MjTokenKind YIELD{92};      // yield
-
-    // Type Qualifiers
-    static constexpr MjTokenKind CONST{93};    // const
-    static constexpr MjTokenKind MUTABLE{94};  // mutable
-    static constexpr MjTokenKind SAFE{95};     // safe
-    static constexpr MjTokenKind VOLATILE{96}; // volatile
-
-    // Type Modifiers
-    static constexpr MjTokenKind POINTER_TYPE_MODIFIER{140};   // T*
-    static constexpr MjTokenKind REFERENCE_TYPE_MODIFIER{141}; // T&
-    static constexpr MjTokenKind FALLIBLE_TYPE_MODIFIER{142};  // T?
-    static constexpr MjTokenKind NO_RETURN_TYPE_MODIFIER{143}; // T!
-
-    // Boolean Literals
-    static constexpr MjTokenKind TRUE{97}; // true
-    static constexpr MjTokenKind FALSE{98}; // false
-
-    // Misc Literals
-    static constexpr MjTokenKind NULL_{99}; // null
-    static constexpr MjTokenKind UNINITIALIZED{100}; // uninitialized
-
-    // String Literals
-    static constexpr MjTokenKind RAW_STRING_LITERAL{101}; // "'.*'"
-    static constexpr MjTokenKind STRING_LITERAL{102};     // "\\".*\\""
-    static constexpr MjTokenKind INTERPOLATED_STRING_LITERAL{103}; // "\\".*\\"" (with escape sequences)
-
-    // Numeric Literals
-    static constexpr MjTokenKind U8_LITERAL{104};     // (number)u8
-    static constexpr MjTokenKind U16_LITERAL{105};    // (number)u16
-    static constexpr MjTokenKind U32_LITERAL{106};    // (number)u(32)
-    static constexpr MjTokenKind U64_LITERAL{107};    // (number)u64
-    static constexpr MjTokenKind U128_LITERAL{108};   // (number)u128
-    static constexpr MjTokenKind I8_LITERAL{109};     // (number)i8
-    static constexpr MjTokenKind I16_LITERAL{110};    // (number)i16
-    static constexpr MjTokenKind I32_LITERAL{111};    // (number)i(32)
-    static constexpr MjTokenKind I64_LITERAL{112};    // (number)i64
-    static constexpr MjTokenKind I128_LITERAL{113};   // (number)i128
-    static constexpr MjTokenKind F16_LITERAL{114};    // (number)f16
-    static constexpr MjTokenKind F32_LITERAL{115};    // (number)f(32)
-    static constexpr MjTokenKind F64_LITERAL{116};    // (number)f64
-    static constexpr MjTokenKind F80_LITERAL{117};    // (number)f80
-    static constexpr MjTokenKind F128_LITERAL{118};   // (number)f128
-
-    static constexpr MjTokenKind NUMERIC_LITERAL{119};          // (number)
-
-    // Identifiers
-    static constexpr MjTokenKind INVALID_IDENTIFIER{120};
-    static constexpr MjTokenKind INVALID_MODULE_NAME{121};
-    static constexpr MjTokenKind ANNOTATION_NAME{123}; // "[a-z0-9][a-z0-9.+-]*"
-    static constexpr MjTokenKind VARIABLE_NAME{124}; // "[a-z0-9_]*[a-z][a-z0-9_]*"
-    static constexpr MjTokenKind FUNCTION_NAME{125}; // "[a-z0-9_]*[a-z][a-z0-9_]*(?=[(<])"
-    static constexpr MjTokenKind MODULE_NAME{126};   //
-    static constexpr MjTokenKind TYPE_NAME{127};     // '[A-Z0-9][A-Z0-9.+-]*[a-z][A-Za-z0-9.+-]*'
-    static constexpr MjTokenKind CONSTANT_NAME{128}; // "([A-Z0-9_]*[A-Z][A-Z0-9_]*|false|null|true|uninitialized)"
-
-    // Comments
-    static constexpr MjTokenKind LINE_COMMENT{129};            // '//'
-    static constexpr MjTokenKind BLOCK_COMMENT{130};           // '///'
-    static constexpr MjTokenKind FORMATTED_LINE_COMMENT{131};  // '//' (with formatting)
-    static constexpr MjTokenKind FORMATTED_BLOCK_COMMENT{132}; // '///' (with formatting)
-
-    // Units
-    static constexpr MjTokenKind UNIT_EXPRESSION{133}; // 
-
-    // sub Tokens
-    static constexpr MjTokenKind NUMERIC_LITERAL_POSTFIX{134};  // (number)[fiu](8|16|32|64|128)
-    static constexpr MjTokenKind NUMERIC_LITERAL_PREFIX{135};   // 0[box](number)
-    static constexpr MjTokenKind CHARACTER_ESCAPE_SEQUENCE{136}; // "\\.*"
-    static constexpr MjTokenKind INVALID_ESCAPE_SEQUENCE{137}; // "\\.*"
+template<class MjTokenStringKind>
+struct MjTokenStringKindValues {
+    static constexpr MjTokenStringKind NONE{0};
+    static constexpr MjTokenStringKind LOWERCASE{1};
+    static constexpr MjTokenStringKind UPPERCASE{2};
+    static constexpr MjTokenStringKind MIXEDCASE{3};
+    static constexpr MjTokenStringKind NUMBER_LITERALS{4};
+    static constexpr MjTokenStringKind STRING_LITERALS{5};
+    static constexpr MjTokenStringKind UNIT_EXPRESSIONS{6};
 };
 
 
-class MjTokenKind : public Enum<u16>, public MjTokenKindValues<MjTokenKind> {
+struct MjTokenStringKind : public Enum<u8>, public MjTokenStringKindValues<MjTokenStringKind> {
+
+    constexpr
+    explicit
+    MjTokenStringKind(u8 id) noexcept : Enum(id) {}
+};
+
+
+struct MjNumberTokenInfo {
+    u8 has_fraction : 1;
+    u8 has_exponent : 1;
+    u8 has_prefix   : 1; // NONE, 0x, 0o, 0b none
+    u8 type_suffix  : 5; // f, f128, f16, f32, f64, f80, u, u128, u16, u32, u64, u8, i, i128, i16, i32, i64, i8
+};
+
+
+
+template<class MjTokenKind>
+struct MjTokenKindValues {
+
+    // The null value token
+    static constexpr MjTokenKind NONE{0};
+
+    // `.*`
+    static constexpr MjTokenKind INVALID{1};
+
+    // '` +`' - Tabs converted to spaces following tab rules
+    /// Signifies the begining of a line
+    /// Encoding: [line_index[7:0], line_index[15:8]]
+    static constexpr MjTokenKind INDENT{2};
+
+    // '` +`'
+    /// An extra whitespace amount.
+    /// Encoding: [width]
+    static constexpr MjTokenKind WHITESPACE{3};
+
+
+    ///
+    /// Keywords
+    ///
+
+
+    static constexpr MjTokenKind AS{4};          // `as`
+    static constexpr MjTokenKind ASM{5};         // `asm`
+    static constexpr MjTokenKind BREAK{6};       // `break`
+    static constexpr MjTokenKind BITFIELD{7};    // `bitfield`
+    static constexpr MjTokenKind CLASS{8};       // `class`
+    static constexpr MjTokenKind CONTINUE{9};    // `continue`
+    static constexpr MjTokenKind DO{10};         // `do`
+    static constexpr MjTokenKind ELSE{11};       // `else`
+    static constexpr MjTokenKind ENUM{12};       // `enum`
+    static constexpr MjTokenKind FAIL{13};       // `fail`
+    static constexpr MjTokenKind FOR{14};        // `for`
+    static constexpr MjTokenKind IF{15};         // `if`
+    static constexpr MjTokenKind IMPL{16};       // `impl`
+    static constexpr MjTokenKind IMPORT{17};     // `import`
+    static constexpr MjTokenKind IN{18};         // `in`
+    static constexpr MjTokenKind INTERFACE{19};  // `interface`
+    static constexpr MjTokenKind IS{20};         // `is`
+    static constexpr MjTokenKind LOOP{21};       // `loop`
+    static constexpr MjTokenKind MATCH{22};      // `match`
+    static constexpr MjTokenKind RETURN{23};     // `return`
+    static constexpr MjTokenKind STRUCT{24};     // `struct`
+    static constexpr MjTokenKind TYPE{25};       // `type`
+    static constexpr MjTokenKind UNION{26};      // `union`
+    static constexpr MjTokenKind UNIT{27};       // `unit`
+    static constexpr MjTokenKind UNTIL{28};      // `until`
+    static constexpr MjTokenKind VARIANT{29};    // `variant`
+    static constexpr MjTokenKind WHERE{30};      // `where`
+    static constexpr MjTokenKind WHILE{31};      // `while`
+    static constexpr MjTokenKind YIELD{32};      // `yield`
+
+
+    ///
+    /// Type Qualifiers
+    ///
+
+
+    static constexpr MjTokenKind CONST{33};    // `const`
+    static constexpr MjTokenKind MUTABLE{34};  // `mutable`
+    static constexpr MjTokenKind SAFE{35};     // `safe`
+    static constexpr MjTokenKind VOLATILE{36}; // `volatile`
+
+
+    ///
+    /// Literals
+    ///
+
+
+    static constexpr MjTokenKind TRUE{37};          // `true`
+    static constexpr MjTokenKind FALSE{38};         // `false`
+    static constexpr MjTokenKind NULL_{39};         // `null`
+    static constexpr MjTokenKind UNINITIALIZED{40}; // `uninitialized`
+
+
+    ///
+    /// Identifiers
+    ///
+
+
+    static constexpr MjTokenKind INVALID_IDENTIFIER{41}; // `.*`
+    static constexpr MjTokenKind ANNOTATION_NAME{42};    // `[a-z0-9][a-z0-9.+-]*`
+    static constexpr MjTokenKind VARIABLE_NAME{43};      // `[a-z0-9_]*[a-z][a-z0-9_]*`
+    static constexpr MjTokenKind FUNCTION_NAME{44};      // `[a-z0-9_]*[a-z][a-z0-9_]*(?=[(<&])`
+    static constexpr MjTokenKind CONSTANT_NAME{45};      // `[A-Z0-9_]*[A-Z][A-Z0-9_]*`
+    static constexpr MjTokenKind TYPE_NAME{46};          // `[A-Z0-9][A-Z0-9+-]*[a-z][A-Za-z0-9+-]*`
+    static constexpr MjTokenKind MODULE_NAME{47};        // `.*(?=::)`
+    static constexpr MjTokenKind NUMERIC_LITERAL{48};    // `<number>`
+    static constexpr MjTokenKind UNIT_EXPRESSION{49};    // `(?:[A-Za-zµΩÅ°'\"]|\\^g|1/)[A-Za-z0-9⁰¹²³⁴⁵⁶⁷⁸⁹⁻⸍µΩÅ°'\"·^*/-]*`
+
+
+    ///
+    /// String Literals
+    ///
+
+
+    static constexpr MjTokenKind RAW_STRING_LITERAL{50};          // `'.*'`
+    static constexpr MjTokenKind STRING_LITERAL{51};              // `".*"`
+    static constexpr MjTokenKind INTERPOLATED_STRING_LITERAL{52}; // `".*"` (with escape sequences)
+
+
+    ///
+    /// Comments
+    ///
+
+
+    static constexpr MjTokenKind LINE_COMMENT{53};            // '// .*'
+    static constexpr MjTokenKind FORMATTED_LINE_COMMENT{54};  // '// .*(`.*`.*)+' (with formatting)
+    static constexpr MjTokenKind BLOCK_COMMENT{55};           // '/// .*'
+    static constexpr MjTokenKind FORMATTED_BLOCK_COMMENT{56}; // '/// .*(`.*`.*)+' (with formatting)
+
+
+    ///
+    /// Prefix Operators
+    ///
+
+
+    static constexpr MjTokenKind NOT{57};                    // `!a`
+    static constexpr MjTokenKind INVERT{58};                 // `~a`
+    static constexpr MjTokenKind NEGATE{59};                 // `-a`
+    static constexpr MjTokenKind DEREFERENCE{60};            // `*a`
+    static constexpr MjTokenKind REFERENCE{61};              // `&a`
+    static constexpr MjTokenKind SHELL_SHORT_OPTION{62};     // `-a`
+    static constexpr MjTokenKind SHELL_LONG_OPTION{63};      // `--a`
+
+
+    ///
+    /// Postfix Operators
+    ///
+
+
+    static constexpr MjTokenKind INCREMENT{64};               // `a++`
+    static constexpr MjTokenKind DECREMENT{65};               // `a--`
+    static constexpr MjTokenKind FUNCTION_REFERENCE{66};      // `f&`
+    static constexpr MjTokenKind POINTER_TYPE_MODIFIER{67};   // `T*`
+    static constexpr MjTokenKind REFERENCE_TYPE_MODIFIER{68}; // `T&`
+    static constexpr MjTokenKind FALLIBLE_TYPE_MODIFIER{69};  // `T?`
+    static constexpr MjTokenKind NO_RETURN_TYPE_MODIFIER{70}; // `T!`
+
+
+    ///
+    /// Infix Operators
+    ///
+
+
+    static constexpr MjTokenKind SET{71};                    // `a = b`
+    static constexpr MjTokenKind EQUAL{72};                  // `a == b`
+    static constexpr MjTokenKind LAMBDA{73};                 // `a => b`
+    static constexpr MjTokenKind LESS_THAN{74};              // `a < b`
+    static constexpr MjTokenKind LEFT_SHIFT{75};             // `a << b`
+    static constexpr MjTokenKind LEFT_SHIFT_SET{76};         // `a <<= b`
+    static constexpr MjTokenKind LESS_THAN_OR_EQUAL{77};     // `a <= b`
+    static constexpr MjTokenKind SPACESHIP{78};              // `a <=> b`
+    static constexpr MjTokenKind GREATER_THAN{79};           // `a > b`
+    static constexpr MjTokenKind RIGHT_SHIFT{80};            // `a >> b`
+    static constexpr MjTokenKind RIGHT_SHIFT_SET{81};        // `a >>= b`
+    static constexpr MjTokenKind GREATER_THAN_OR_EQUAL{82};  // `a >= b`
+    static constexpr MjTokenKind MULTIPLY{83};               // `a * b`
+    static constexpr MjTokenKind MULTIPLY_SET{84};           // `a *= b`
+    static constexpr MjTokenKind DIVIDE{85};                 // `a / b`
+    static constexpr MjTokenKind DIVIDE_SET{86};             // `a /= b`
+    static constexpr MjTokenKind REMAINDER{87};              // `a % b`
+    static constexpr MjTokenKind REMAINDER_SET{88};          // `a %= b`
+    static constexpr MjTokenKind PLUS{89};                   // `a + b`
+    static constexpr MjTokenKind PLUS_SET{90};               // `a += b`
+    static constexpr MjTokenKind MINUS{91};                  // `a - b`
+    static constexpr MjTokenKind MINUS_SET{92};              // `a -= b`
+    static constexpr MjTokenKind BITWISE_AND{93};            // `a & b`
+    static constexpr MjTokenKind BITWISE_AND_SET{94};        // `a &= b`
+    static constexpr MjTokenKind BITWISE_OR{95};             // `a | b`
+    static constexpr MjTokenKind BITWISE_OR_SET{96};         // `a |= b`
+    static constexpr MjTokenKind BITWISE_XOR{97};            // `a ^ b`
+    static constexpr MjTokenKind BITWISE_XOR_SET{98};        // `a ^= b`
+    static constexpr MjTokenKind LOGICAL_AND{99};            // `a && b`
+    static constexpr MjTokenKind LOGICAL_OR{100};            // `a || b`
+    static constexpr MjTokenKind NOT_EQUAL{101};             // `a != b`
+    static constexpr MjTokenKind TERNARY_THEN{102};          // `a ? b`
+    static constexpr MjTokenKind TERNARY_ELSE{103};          // `b : c`
+
+
+    ///
+    /// Separators
+    ///
+
+
+    static constexpr MjTokenKind SCOPE{104};                // `T::m`
+    static constexpr MjTokenKind DOT{105};                  // `a.m`
+
+    static constexpr MjTokenKind COMMA{106};                // `,`
+    static constexpr MjTokenKind SEMICOLON{107};            // `;`
+    static constexpr MjTokenKind COLON{108};                // `:`
+
+    static constexpr MjTokenKind HASH{109};                 // `#`
+    static constexpr MjTokenKind DOLLAR_SIGN{110};          // `$`
+    static constexpr MjTokenKind AT{111};                   // `@`
+
+    static constexpr MjTokenKind OPEN_PARENTHESIS{112};     // `(`
+    static constexpr MjTokenKind CLOSE_PARENTHESIS{113};    // `)`
+    static constexpr MjTokenKind OPEN_SQUARE_BRACKET{114};  // `[`
+    static constexpr MjTokenKind CLOSE_SQUARE_BRACKET{115}; // `]`
+    static constexpr MjTokenKind OPEN_CURLY_BRACE{116};     // `{`
+    static constexpr MjTokenKind CLOSE_CURLY_BRACE{117};    // `}`
+    static constexpr MjTokenKind OPEN_ANGLE_BRACKET{118};   // `<`
+    static constexpr MjTokenKind CLOSE_ANGLE_BRACKET{119};  // `>`
+
+    static constexpr MjTokenKind OPEN_CAST{120};     // `(`
+    static constexpr MjTokenKind CLOSE_CAST{121};    // `)`
+    static constexpr MjTokenKind OPEN_TYPE{122};     // `(`
+    static constexpr MjTokenKind CLOSE_TYPE{123};    // `)`
+
+
+    ///
+    /// Lifetime Operators
+    ///
+
+
+    static constexpr MjTokenKind GLOBAL_LIFETIME{124}; // `[*&]"`
+    static constexpr MjTokenKind LOCAL_LIFETIME{125};  // `[*&]'`
+
+
+    ///
+    /// Subtokens
+    ///
+
+
+    static constexpr MjTokenKind NUMERIC_LITERAL_PREFIX{126};    // `0[box]`
+    static constexpr MjTokenKind NUMERIC_LITERAL_SUFFIX{127};    // `[fiu](8|16|32|64|128)`
+    static constexpr MjTokenKind CHARACTER_ESCAPE_SEQUENCE{128}; // `\.*`
+    static constexpr MjTokenKind INVALID_ESCAPE_SEQUENCE{129};   // `\.*`
+};
+
+
+/// The token ID value encoded in the token stream. Additional metadata is stored for builtin tokens
+/// so that their string values do not have to be managed and their relative whitespace can be
+/// encoded.
+class MjTokenKind : public Enum<u8>, public MjTokenKindValues<MjTokenKind> {
 private:
     static
     constexpr
@@ -201,73 +280,10 @@ private:
         StringView text;
         u32 flags = 0;
     } DATA[] {
-        {"AT",                     "@"},
-        {"LAMBDA",                 "=>"},
-        {"DEREFERENCE",            "*"},
-        {"NULLABLE_POINTER",       "^"},
-        {"REFERENCE",              "&"},
-        {"GLOBAL_LIFETIME",        "\""},
-        {"LOCAL_LIFETIME",         "'"},
-        {"INVERT",                 "~"},
-        {"NEGATE",                 "-"},
-        {"INCREMENT",              "++"},
-        {"DECREMENT",              "--"},
-        {"SET",                    "="},
-        {"RIGHT_SHIFT",            ">>"},
-        {"RIGHT_SHIFT_SET",        ">>="},
-        {"LEFT_SHIFT",             "<<"},
-        {"LEFT_SHIFT_SET",         "<<="},
-        {"MULTIPLY",               "*"},
-        {"MULTIPLY_SET",           "*="},
-        {"DIVIDE",                 "/"},
-        {"DIVIDE_SET",             "/="},
-        {"REMAINDER",              "%"},
-        {"REMAINDER_SET",          "%="},
-        {"PLUS",                   "+"},
-        {"PLUS_SET",               "+="},
-        {"MINUS",                  "-"},
-        {"MINUS_SET",              "-="},
-        {"BITWISE_AND",            "&"},
-        {"BITWISE_AND_SET",        "&="},
-        {"BITWISE_OR",             "|"},
-        {"BITWISE_OR_SET",         "|="},
-        {"BITWISE_XOR",            "^"},
-        {"BITWISE_XOR_SET",        "^="},
-        {"LOGICAL_AND",            "&&"},
-        {"LOGICAL_OR",             "||"},
-
-        {"NOT",                    "!a"},
-        {"EQUAL",                  "=="},
-        {"NOT_EQUAL",              "!="},
-        {"SPACESHIP",              "<=>"},
-        {"LESS_THAN",              "<"},
-        {"LESS_THAN_OR_EQUAL",     "<="},
-        {"GREATER_THAN",           ">"},
-        {"GREATER_THAN_OR_EQUAL",  ">="},
-
-        {"SCOPE",                  "::"},
-        {"DOT",                    "."},
-        {"COMMA",                  ","},
-        {"SEMICOLON",              ";"},
-        {"COLON",                  ":"},
-        {"QUESTION",               "?"},
-        {"HASH",                   "#"},
-        {"DOLLAR_SIGN",            "$"},
-        {"SHELL_COMMAND",          nullptr},
-        {"SHELL_OPTION",           nullptr},
-
-        {"OPEN_CAST",              "("},
-        {"CLOSE_CAST",             ")"},
-        {"OPEN_TYPE",              "("},
-        {"CLOSE_TYPE",             ")"},
-        {"OPEN_PARENTHESIS",       "("},
-        {"CLOSE_PARENTHESIS",      ")"},
-        {"OPEN_SQUARE_BRACKET",    "["},
-        {"CLOSE_SQUARE_BRACKET",   "]"},
-        {"OPEN_CURLY_BRACE",       "{"},
-        {"CLOSE_CURLY_BRACE",      "}"},
-        {"OPEN_ANGLE_BRACKET",     "<"},
-        {"CLOSE_ANGLE_BRACKET",    ">"},
+        {"NONE",       nullptr},
+        {"INVALID",    nullptr},
+        {"INDENT",     nullptr},
+        {"WHITESPACE", nullptr},
 
         {"AS",                     "as"},
         {"ASM",                    "asm"},
@@ -302,57 +318,113 @@ private:
         {"SAFE",                   "safe"},
         {"VOLATILE",               "volatile"},
 
-        {"POINTER_TYPE_MODIFIER",   "*"},
-        {"REFERENCE_TYPE_MODIFIER", "&"},
-        {"NO_RETURN_TYPE_MODIFIER", "?"},
-        {"FALLIBLE_TYPE_MODIFIER",  "!"},
-
         {"TRUE",                    "true"},
         {"FALSE",                   "false"},
-
         {"NULL",                    "null"},
         {"UNINITIALIZED",           "uninitialized"},
+
+        {"INVALID_IDENTIFIER",      nullptr},
+        {"ANNOTATION_NAME",         nullptr},
+        {"VARIABLE_NAME",           nullptr},
+        {"FUNCTION_NAME",           nullptr},
+        {"CONSTANT_NAME",           nullptr},
+        {"TYPE_NAME",               nullptr},
+        {"MODULE_NAME",             nullptr},
+        {"NUMERIC_LITERAL",         nullptr},
+        {"UNIT_EXPRESSION",         nullptr},
 
         {"RAW_STRING_LITERAL",          nullptr},
         {"STRING_LITERAL",              nullptr},
         {"INTERPOLATED_STRING_LITERAL", nullptr},
 
-        {"U8_LITERAL",   "u8"},
-        {"U16_LITERAL",  "u16"},
-        {"U32_LITERAL",  "u32"},
-        {"U64_LITERAL",  "u64"},
-        {"U128_LITERAL", "u128"},
-        {"I8_LITERAL",   "i8"},
-        {"I16_LITERAL",  "i16"},
-        {"I32_LITERAL",  "i32"},
-        {"I64_LITERAL",  "i64"},
-        {"I128_LITERAL", "i128"},
-        {"F16_LITERAL",  "f16"},
-        {"F32_LITERAL",  "f32"},
-        {"F64_LITERAL",  "f64"},
-        {"F80_LITERAL",  "f80"},
-        {"F128_LITERAL", "f128"},
+        {"LINE_COMMENT",            nullptr},
+        {"FORMATTED_LINE_COMMENT",  nullptr},
+        {"BLOCK_COMMENT",           nullptr},
+        {"FORMATTED_BLOCK_COMMENT", nullptr},
 
-        {"NUMERIC_LITERAL",                  nullptr},
+        {"NOT",                    "!"},
+        {"INVERT",                 "~"},
+        {"NEGATE",                 "-"},
+        {"DEREFERENCE",            "*"},
+        {"REFERENCE",              "&"},
+        {"SHELL_SHORT_OPTION",     "-"},
+        {"SHELL_LONG_OPTION",      "--"},
 
-        {"INVALID_IDENTIFIER",               nullptr},
-        {"INVALID_MODULE",                   nullptr},
-        {"ANNOTATION_NAME",                  nullptr},
-        {"VARIABLE_NAME",                    nullptr},
-        {"FUNCTION_NAME",                    nullptr},
-        {"MODULE_NAME",                      nullptr},
-        {"TYPE_NAME",                        nullptr},
-        {"CONSTANT_NAME",                    nullptr},
+        {"INCREMENT",               "++"},
+        {"DECREMENT",               "--"},
+        {"FUNCTION_REFERENCE",      "&"},
+        {"POINTER_TYPE_MODIFIER",   "*"},
+        {"REFERENCE_TYPE_MODIFIER", "&"},
+        {"FALLIBLE_TYPE_MODIFIER",  "?"},
+        {"NO_RETURN_TYPE_MODIFIER", "!"},
 
-        {"LINE_COMMENT",                       "//"},
-        {"BLOCK_COMMENT",                      "///"},
-        {"FORMATTED_LINE_COMMENT",             "//"},
-        {"FORMATTED_BLOCK_COMMENT",            "///"},
+        {"SET",                    "="},
+        {"EQUAL",                  "=="},
+        {"LAMBDA",                 "=>"},
+        {"LESS_THAN",              "<"},
+        {"LEFT_SHIFT",             "<<"},
+        {"LEFT_SHIFT_SET",         "<<="},
+        {"LESS_THAN_OR_EQUAL",     "<="},
+        {"SPACESHIP",              "<=>"},
+        {"GREATER_THAN",           ">"},
+        {"RIGHT_SHIFT",            ">>"},
+        {"RIGHT_SHIFT_SET",        ">>="},
+        {"GREATER_THAN_OR_EQUAL",  ">="},
+        {"DEREFERENCE",            "*"},
+        {"NULLABLE_POINTER",       "^"},
+        {"REFERENCE",              "&"},
+        {"INVERT",                 "~"},
+        {"NEGATE",                 "-"},
+        {"INCREMENT",              "++"},
+        {"DECREMENT",              "--"},
+        {"MULTIPLY",               "*"},
+        {"MULTIPLY_SET",           "*="},
+        {"DIVIDE",                 "/"},
+        {"DIVIDE_SET",             "/="},
+        {"REMAINDER",              "%"},
+        {"REMAINDER_SET",          "%="},
+        {"PLUS",                   "+"},
+        {"PLUS_SET",               "+="},
+        {"MINUS",                  "-"},
+        {"MINUS_SET",              "-="},
+        {"BITWISE_AND",            "&"},
+        {"BITWISE_AND_SET",        "&="},
+        {"BITWISE_OR",             "|"},
+        {"BITWISE_OR_SET",         "|="},
+        {"BITWISE_XOR",            "^"},
+        {"BITWISE_XOR_SET",        "^="},
+        {"LOGICAL_AND",            "&&"},
+        {"LOGICAL_OR",             "||"},
 
-        {"UNIT_EXPRESSION",                  nullptr},
+        {"NOT_EQUAL",              "!="},
 
-        {"NUMERIC_LITERAL_POSTFIX",          nullptr},
+        {"SCOPE",                  "::"},
+        {"DOT",                    "."},
+        {"COMMA",                  ","},
+        {"SEMICOLON",              ";"},
+        {"COLON",                  ":"},
+        {"QUESTION",               "?"},
+        {"HASH",                   "#"},
+        {"DOLLAR_SIGN",            "$"},
+        {"AT",                     "@"},
+        {"OPEN_CAST",              "("},
+        {"CLOSE_CAST",             ")"},
+        {"OPEN_TYPE",              "("},
+        {"CLOSE_TYPE",             ")"},
+        {"OPEN_PARENTHESIS",       "("},
+        {"CLOSE_PARENTHESIS",      ")"},
+        {"OPEN_SQUARE_BRACKET",    "["},
+        {"CLOSE_SQUARE_BRACKET",   "]"},
+        {"OPEN_CURLY_BRACE",       "{"},
+        {"CLOSE_CURLY_BRACE",      "}"},
+        {"OPEN_ANGLE_BRACKET",     "<"},
+        {"CLOSE_ANGLE_BRACKET",    ">"},
+
+        {"GLOBAL_LIFETIME",        "\""},
+        {"LOCAL_LIFETIME",         "'"},
+
         {"NUMERIC_LITERAL_PREFIX",           nullptr},
+        {"NUMERIC_LITERAL_SUFFIX",           nullptr},
         {"CHARACTER_ESCAPE_SEQUENCE",        nullptr},
     };
 public:
@@ -365,7 +437,7 @@ public:
 
     constexpr
     explicit
-    MjTokenKind(u16 id) noexcept : Enum(id) {}
+    MjTokenKind(u8 id) noexcept : Enum(id) {}
 
 
     ///
@@ -380,7 +452,7 @@ public:
 
 
     constexpr
-    StringView text() const noexcept {
+    StringView builtin_text() const noexcept {
         return DATA[_id].text;
     }
 
@@ -393,19 +465,25 @@ public:
 
     constexpr
     bool is_operator() const noexcept {
-        return true;
+        return _id - INVALID < CLOSE_ANGLE_BRACKET - INVALID;
     }
 
 
     constexpr
     bool is_keyword() const noexcept {
-        return true;
+        return _id - AS < YIELD - AS;
+    }
+
+
+    constexpr
+    bool is_type_qualifier() const noexcept {
+        return _id - CONST < VOLATILE - CONST;
     }
 
 
     constexpr
     bool is_identifier() const noexcept {
-        return true;
+        return _id - INVALID_IDENTIFIER < MODULE_NAME - INVALID_IDENTIFIER;
     }
 
 
@@ -448,5 +526,37 @@ public:
     constexpr
     bool requires_trailing_whitespace() const noexcept {
         return DATA[_id].flags & 2;
+    }
+
+
+    constexpr
+    u8 encoded_size() const noexcept {
+        return DATA[_id].flags & 3;
+    }
+
+
+    constexpr
+    u8 has_builtin_text() const noexcept {
+        return;
+    }
+
+
+    constexpr
+    MjTokenStringKind string_kind() const noexcept {
+        return;
+    }
+
+
+    constexpr
+    bool has_whitespace(MjTokenKind other) noexcept {
+        return MjTokenKind::whitespace(*this, other);
+    }
+
+
+    /// Return true if there is canonical whitespace between the given tokens.
+    static
+    constexpr
+    bool whitespace(MjTokenKind a, MjTokenKind b) noexcept {
+        return DATA[a].flags & DATA[b].flags;
     }
 };

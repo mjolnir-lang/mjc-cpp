@@ -48,7 +48,7 @@ public:
     /// @param data The C string to copy
     template<u32 SIZE>
     constexpr
-    StringView(const u8 (&data)[SIZE]) noexcept : _data(data, SIZE) {}
+    StringView(const u8 (&data)[SIZE]) noexcept : _data(data, SIZE - 1) {}
 
 
     /// @brief Create a StringView from a byte array.
@@ -67,8 +67,11 @@ public:
 
     /// @brief Create a StringView from a null-terminated, C-style, string.
     /// @param data The C string to copy
+    static
     constexpr
-    StringView(const u8 *data) noexcept : _data(data, Ascii::c_str_size(data)) {}
+    StringView from_c_str(const u8 *data) noexcept {
+        return {data, Ascii::c_str_size(data)};
+    }
 
 
     ///
@@ -510,6 +513,19 @@ public:
     }
 
 
+
+    constexpr
+    const u8 *begin() const noexcept {
+        return _data.begin();
+    }
+
+
+    constexpr
+    const u8 *end() const noexcept {
+        return _data.end();
+    }
+
+
     ///
     /// Parsing Methods
     ///
@@ -667,7 +683,7 @@ StringView operator<<(StringView slice, u32 size) noexcept {
 /// StringView extends the Type namespace with Type::name<T>()
 ///
 
-
+/*
 #include <source_location>
 
 
@@ -722,3 +738,4 @@ namespace Type {
         return wrapped_name.substr(prefix_length, type_name_length);
     }
 };
+*/
