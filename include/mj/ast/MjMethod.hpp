@@ -32,6 +32,63 @@ public:
     ///
 
 
+    // The comment associated with the variable
+    constexpr
+    bool has_name() const noexcept {
+        return _name != nullptr;
+    }
+
+
+    // The comment associated with the variable
+    constexpr
+    bool is_anonymous() const noexcept {
+        return _name == nullptr;
+    }
+
+
+    // The variable name
+    constexpr
+    const MjToken *name() const noexcept {
+        return _name;
+    }
+
+
+    // The temporary sequence of tokens that make the definition
+    constexpr
+    MjBlockStatement *body() const noexcept {
+        return _body;
+    }
+
+
+    constexpr
+    bool is_constructor() const noexcept {
+        return false;
+    }
+
+
+    constexpr
+    bool is_destructor() const noexcept {
+        return false;
+    }
+
+
+    constexpr
+    bool is_operator() const noexcept {
+        return false;
+    }
+
+
+    constexpr
+    bool is_lambda() const noexcept {
+        return false;
+    }
+
+
+    constexpr
+    bool is_method() const noexcept {
+        return true;
+    }
+
     constexpr
     bool is_deterministic(MjFunctionArgumentList *argument_list) const noexcept {
         for (MjFunctionArgument *argument : *argument_list) {

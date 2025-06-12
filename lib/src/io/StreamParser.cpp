@@ -1,7 +1,6 @@
 #include <io/StringParser.hpp>
 
 
-
 Error ParseFormat::parse(ParseFormat &parse_format, StringView format, std::initializer_list<Parsable> args, u32 default_index) {
     u32 i = 0;
 

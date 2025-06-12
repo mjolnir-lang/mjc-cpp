@@ -1,12 +1,13 @@
 #pragma once
 
 #include <mj/ast/MjItem.hpp>
+#include <mj/ast/MjItemKind.hpp>
+#include <mj/ast/MjToken.hpp>
 
 
-// A statement is a structured unit of execution.
+// A structured unit of execution.
 class MjStatement : public MjItem {
 protected:
-    bool _is_deterministic;
 
 
     ///
@@ -15,7 +16,7 @@ protected:
 
 
     constexpr
-    MjStatement(MjItemKind item_kind, Slice<const MjToken> tokens = nullptr) noexcept : MjItem(item_kind, tokens) {}
+    MjStatement(MjItemInfo item_info) noexcept : MjItem(item_info) {}
 
 
     ///
@@ -25,7 +26,21 @@ protected:
 
     virtual
     ~MjStatement() = default;
+
+
 public:
+
+
+    ///
+    /// Shared Properties
+    ///
+
+
+    static
+    constexpr
+    bool is_type_of(const MjItem *item) {
+        return item->item_kind() == MjItemKind::STATEMENT;
+    }
 
 
     ///

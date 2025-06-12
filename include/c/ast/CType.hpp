@@ -36,25 +36,25 @@ char *[7]*()**[8][] foo;
 #include <core/Enum.hpp>
 
 
-template<class CTypeType>
-struct CTypeTypeValues {
-    static constexpr CTypeType VOID{0};
-    static constexpr CTypeType ARRAY{1};
-    static constexpr CTypeType FUNCTION{2};
-    static constexpr CTypeType POINTER{3};
-    static constexpr CTypeType STRUCTURE{4};
-    static constexpr CTypeType UNION{5};
-    static constexpr CTypeType ENUMERATION{6};
+template<class CTypeKind>
+struct CTypeKindValues {
+    static constexpr CTypeKind VOID{0};
+    static constexpr CTypeKind ARRAY{1};
+    static constexpr CTypeKind FUNCTION{2};
+    static constexpr CTypeKind POINTER{3};
+    static constexpr CTypeKind STRUCTURE{4};
+    static constexpr CTypeKind UNION{5};
+    static constexpr CTypeKind ENUMERATION{6};
 };
 
 
-class CTypeType : public Enum<u8>, public CTypeTypeValues<CTypeType> {
+class CTypeKind : public Enum<u8>, public CTypeKindValues<CTypeKind> {
 public:
 
 
     constexpr
     explicit
-    CTypeType(u8 id) noexcept : Enum(id) {}
+    CTypeKind(u8 id) noexcept : Enum(id) {}
 
 
     constexpr
@@ -105,7 +105,7 @@ public:
 
 /// @brief An `CType` is defines the properties of an `CObject`.
 class CType {
-    CTypeType _type;
+    CTypeKind _type;
 protected:
     static const Vector<CMember *> MEMBERS;
     static const Vector<COperator *> OPERATORS;
@@ -116,7 +116,7 @@ public:
 
 
     /// @brief Return the size of the type in bytes.
-    CTypeType type() const noexcept {
+    CTypeKind type() const noexcept {
         return _type;
     }
 

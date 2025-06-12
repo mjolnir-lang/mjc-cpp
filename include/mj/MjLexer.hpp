@@ -2,7 +2,7 @@
 
 #include <mj/MjLexerError.hpp>
 #include <mj/MjLexerState.hpp>
-#include <mj/ast/MjFile.hpp>
+#include <mj/ast/MjSourceFile.hpp>
 
 #include <vector>
 #include <stack>
@@ -20,7 +20,7 @@ private:
     std::vector<u8> _data;
     const u8 *_ch;
 
-    MjFile &_file;
+    MjSourceFile &_file;
 
     std::vector<MjLexerError> _errors;
 
@@ -41,7 +41,7 @@ public:
 
 
     static
-    MjFile *parse_file(std::filesystem::path file_path, bool emit_subtokens = false) noexcept;
+    MjSourceFile *parse_file(std::filesystem::path file_path, bool emit_subtokens = false) noexcept;
 
 
 private:
@@ -57,7 +57,7 @@ private:
 private:
 
 
-    MjLexer(MjFile &file, bool emit_subtokens = false) noexcept :
+    MjLexer(MjSourceFile &file, bool emit_subtokens = false) noexcept :
         _file(file),
         _emit_subtokens(emit_subtokens)
     {}
@@ -102,19 +102,33 @@ private:
     Error parse_shell_token() noexcept;
 
 
+    Error parse_annotation() noexcept;
+
+
+    Error parse_annotation_name() noexcept;
+
+
+    Error parse_constant_name() noexcept;
+    Error parse_variable_name() noexcept;
+
+
     /// Parse an identifier. Either a keyword, function, type, constant, module, literal, or variable.
     Error parse_identifier() noexcept;
 
+
     Error parse_keyword() noexcept;
 
-    Error parse_module_name(StringView token_text) noexcept;
-
-    // Parse a user-defined type name. (Will not check for keywords)
+    // Parse a user-defined type or module name. (Will not check for keywords)
     Error parse_type_name() noexcept;
 
 
     /// Parse a numeric literal.
     Error parse_numeric_literal() noexcept;
+
+
+    /// Return the size in bytes of the next token if it is a valid numeric type name or zero.
+    /// NOTE: The end of word boundary is not tested.
+    u32 peek_numeric_type_name_size() noexcept;
 
 
     /// Parse a unit expression.
@@ -208,10 +222,30 @@ private:
     ///
 
 
+    void error(MjToken token, MjSubToken subtoken, StringView message) noexcept;
+
+
     void error(MjToken token, StringView message) noexcept;
 
 
     void error(StringView message) noexcept {
         error(token(), message);
+    }
+
+
+private:
+
+
+    static
+    constexpr
+    bool id_is_reserved_name(u16 id) noexcept {
+        return id < MjTokenKind::reserved_names().size();
+    }
+
+
+    static
+    constexpr
+    MjTokenKind from_id(u16 id) noexcept {
+        return MjTokenKind(MjTokenKind::AND + id);
     }
 };

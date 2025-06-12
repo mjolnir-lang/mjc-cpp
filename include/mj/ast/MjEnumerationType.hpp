@@ -1,30 +1,45 @@
 #pragma once
 
-#include <mj/ast/MjEnumerationDefinition.hpp>
-#include <mj/ast/MjType.hpp>
+#include <mj/ast/MjVariable.hpp>
 
 
 class MjEnumerationType : public MjType {
 private:
     MjType *_index_type;
-    Vector<MjVariable *> _values;
+    MjType *_value_type;
+    MjToken _name;
 public:
 
 
+    constexpr
     MjEnumerationType(
-        const MjToken *name,
-        MjComment *comment,
+        MjToken name,
         MjType *index_type,
-        MjTemplateArgumentList template_argument_list = nullptr
+        MjType *value_type,
+        Slice<const MjToken> tokens = nullptr
     ) :
-        MjType(MjTypeType::ENUMERATION, name, template_argument_list),
-        _index_type(index_type)
+        MjType(MjItemKind::ENUMERATION_TYPE, tokens),
+        _index_type(index_type),
+        _value_type(value_type),
+        _name(name)
     {}
 
 
     ///
     /// Properties
     ///
+
+
+    constexpr
+    const MjType *value_type() const noexcept {
+        return _value_type;
+    }
+
+
+    constexpr
+    MjType *value_type() noexcept {
+        return _value_type;
+    }
 
 
     constexpr
@@ -40,14 +55,14 @@ public:
 
 
     constexpr
-    const Vector<MjVariable *> &values() const noexcept {
-        return _values;
+    Slice<const MjVariable *> &values() const noexcept {
+        return _items;
     }
 
 
     constexpr
-    Vector<MjVariable *> &values() noexcept {
-        return _values;
+    Slice<MjVariable *> &values() noexcept {
+        return _items;
     }
 
 

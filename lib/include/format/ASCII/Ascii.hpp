@@ -114,6 +114,20 @@ namespace Ascii {
 
     /// @brief Return true if the character is .
     constexpr
+    bool is_uppercase_alnum(u8 ch) noexcept {
+        return is_upper(ch) || is_digit(ch);
+    }
+
+
+    /// @brief Return true if the character is .
+    constexpr
+    bool is_lowercase_alnum(u8 ch) noexcept {
+        return is_lower(ch) || is_digit(ch);
+    }
+
+
+    /// @brief Return true if the character is .
+    constexpr
     bool is_print(u8 ch) noexcept {
         return ch - ' ' < 94;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/Enum.hpp>
+#include <core/Range.hpp>
 #include <core/StringView.hpp>
 
 
@@ -32,7 +33,6 @@ struct MjNumberTokenInfo {
 };
 
 
-
 template<class MjTokenKind>
 struct MjTokenKindValues {
 
@@ -58,10 +58,12 @@ struct MjTokenKindValues {
     ///
 
 
+    static constexpr MjTokenKind AND{4};         // `and`
     static constexpr MjTokenKind AS{4};          // `as`
     static constexpr MjTokenKind ASM{5};         // `asm`
-    static constexpr MjTokenKind BREAK{6};       // `break`
-    static constexpr MjTokenKind BITFIELD{7};    // `bitfield`
+    static constexpr MjTokenKind BITFIELD{6};    // `bitfield`
+    static constexpr MjTokenKind BREAK{7};       // `break`
+    static constexpr MjTokenKind CASE{8};        // `case`
     static constexpr MjTokenKind CLASS{8};       // `class`
     static constexpr MjTokenKind CONTINUE{9};    // `continue`
     static constexpr MjTokenKind DO{10};         // `do`
@@ -75,15 +77,16 @@ struct MjTokenKindValues {
     static constexpr MjTokenKind IN{18};         // `in`
     static constexpr MjTokenKind INTERFACE{19};  // `interface`
     static constexpr MjTokenKind IS{20};         // `is`
-    static constexpr MjTokenKind LOOP{21};       // `loop`
     static constexpr MjTokenKind MATCH{22};      // `match`
+    static constexpr MjTokenKind NOT{57};        // `not`
+    static constexpr MjTokenKind OR{22};         // `or`
     static constexpr MjTokenKind RETURN{23};     // `return`
     static constexpr MjTokenKind STRUCT{24};     // `struct`
     static constexpr MjTokenKind TYPE{25};       // `type`
+    static constexpr MjTokenKind THEN{25};       // `then`
     static constexpr MjTokenKind UNION{26};      // `union`
     static constexpr MjTokenKind UNIT{27};       // `unit`
     static constexpr MjTokenKind UNTIL{28};      // `until`
-    static constexpr MjTokenKind VARIANT{29};    // `variant`
     static constexpr MjTokenKind WHERE{30};      // `where`
     static constexpr MjTokenKind WHILE{31};      // `while`
     static constexpr MjTokenKind YIELD{32};      // `yield`
@@ -97,7 +100,6 @@ struct MjTokenKindValues {
     static constexpr MjTokenKind CONST{33};    // `const`
     static constexpr MjTokenKind MUTABLE{34};  // `mutable`
     static constexpr MjTokenKind SAFE{35};     // `safe`
-    static constexpr MjTokenKind VOLATILE{36}; // `volatile`
 
 
     ///
@@ -122,7 +124,6 @@ struct MjTokenKindValues {
     static constexpr MjTokenKind FUNCTION_NAME{44};      // `[a-z0-9_]*[a-z][a-z0-9_]*(?=[(<&])`
     static constexpr MjTokenKind CONSTANT_NAME{45};      // `[A-Z0-9_]*[A-Z][A-Z0-9_]*`
     static constexpr MjTokenKind TYPE_NAME{46};          // `[A-Z0-9][A-Z0-9+-]*[a-z][A-Za-z0-9+-]*`
-    static constexpr MjTokenKind MODULE_NAME{47};        // `.*(?=::)`
     static constexpr MjTokenKind NUMERIC_LITERAL{48};    // `<number>`
     static constexpr MjTokenKind UNIT_EXPRESSION{49};    // `(?:[A-Za-zµΩÅ°'\"]|\\^g|1/)[A-Za-z0-9⁰¹²³⁴⁵⁶⁷⁸⁹⁻⸍µΩÅ°'\"·^*/-]*`
 
@@ -153,7 +154,6 @@ struct MjTokenKindValues {
     ///
 
 
-    static constexpr MjTokenKind NOT{57};                    // `!a`
     static constexpr MjTokenKind INVERT{58};                 // `~a`
     static constexpr MjTokenKind NEGATE{59};                 // `-a`
     static constexpr MjTokenKind DEREFERENCE{60};            // `*a`
@@ -209,11 +209,7 @@ struct MjTokenKindValues {
     static constexpr MjTokenKind BITWISE_OR_SET{96};         // `a |= b`
     static constexpr MjTokenKind BITWISE_XOR{97};            // `a ^ b`
     static constexpr MjTokenKind BITWISE_XOR_SET{98};        // `a ^= b`
-    static constexpr MjTokenKind LOGICAL_AND{99};            // `a && b`
-    static constexpr MjTokenKind LOGICAL_OR{100};            // `a || b`
     static constexpr MjTokenKind NOT_EQUAL{101};             // `a != b`
-    static constexpr MjTokenKind TERNARY_THEN{102};          // `a ? b`
-    static constexpr MjTokenKind TERNARY_ELSE{103};          // `b : c`
 
 
     ///
@@ -278,50 +274,62 @@ private:
     struct Data {
         StringView name;
         StringView text;
-        u32 flags = 0;
+        struct Flags {
+            u8 can_be_variable : 1;
+            u8 can_be_template : 1;
+            u8 can_be_function : 1;
+            u8 keyword_always  : 1;
+            u8 keyword_if_type : 1;
+            u8 keyword_if_angle : 1;
+            u8 keyword_if_brace : 1;
+            u8 keyword_if_variable : 1;
+            u8 keyword_if_expression : 1;
+        } flags;
     } DATA[] {
         {"NONE",       nullptr},
         {"INVALID",    nullptr},
         {"INDENT",     nullptr},
         {"WHITESPACE", nullptr},
 
-        {"AS",                     "as"},
-        {"ASM",                    "asm"},
-        {"BREAK",                  "break"},
-        {"BITFIELD",               "bitfield"},
-        {"CLASS",                  "class"},
-        {"CONTINUE",               "continue"},
-        {"DO",                     "do"},
-        {"ELSE",                   "else"},
-        {"ENUM",                   "enum"},
-        {"FAIL",                   "fail"},
-        {"FOR",                    "for"},
-        {"IF",                     "if"},
-        {"IMPL",                   "impl"},
-        {"IMPORT",                 "import"},
-        {"IN",                     "in"},
-        {"INTERFACE",              "interface"},
-        {"IS",                     "is"},
-        {"MATCH",                  "match"},
-        {"RETURN",                 "return"},
-        {"STRUCT",                 "struct"},
-        {"TYPE",                   "type"},
-        {"UNION",                  "union"},
-        {"UNIT",                   "unit"},
-        {"UNTIL",                  "until"},
-        {"WHERE",                  "where"},
-        {"WHILE",                  "while"},
-        {"YIELD",                  "yield"},
+        {"AND",                    "and",               },
+        {"AS",                     "as",                },
+        {"ASM",                    "asm",               },
+        {"BREAK",                  "break",             },
+        {"BITFIELD",               "bitfield",          },
+        {"CLASS",                  "class",             },
+        {"CONTINUE",               "continue",          },
+        {"DO",                     "do",                },
+        {"ELSE",                   "else",              },
+        {"ENUM",                   "enum",              },
+        {"FAIL",                   "fail",              },
+        {"FOR",                    "for",               },
+        {"IF",                     "if",                },
+        {"IMPL",                   "impl",              },
+        {"IMPORT",                 "import",            },
+        {"IN",                     "in",                },
+        {"INTERFACE",              "interface",         },
+        {"IS",                     "is",                },
+        {"MATCH",                  "match",             },
+        {"NOT",                    "not",               },
+        {"OR",                     "or",                },
+        {"RETURN",                 "return",            },
+        {"STRUCT",                 "struct",            },
+        {"TYPE",                   "type",              },
+        {"UNION",                  "union",             },
+        {"UNIT",                   "unit",              },
+        {"UNTIL",                  "until",             },
+        {"WHERE",                  "where",             },
+        {"WHILE",                  "while",             },
+        {"YIELD",                  "yield",             },
 
-        {"CONST",                  "const"},
-        {"MUTABLE",                "mutable"},
-        {"SAFE",                   "safe"},
-        {"VOLATILE",               "volatile"},
+        {"CONST",                  "const",             },
+        {"MUTABLE",                "mutable",           },
+        {"SAFE",                   "safe",              },
 
-        {"TRUE",                    "true"},
-        {"FALSE",                   "false"},
-        {"NULL",                    "null"},
-        {"UNINITIALIZED",           "uninitialized"},
+        {"TRUE",                    "true",             },
+        {"FALSE",                   "false",            },
+        {"NULL",                    "null",             },
+        {"UNINITIALIZED",           "uninitialized",    },
 
         {"INVALID_IDENTIFIER",      nullptr},
         {"ANNOTATION_NAME",         nullptr},
@@ -342,7 +350,6 @@ private:
         {"BLOCK_COMMENT",           nullptr},
         {"FORMATTED_BLOCK_COMMENT", nullptr},
 
-        {"NOT",                    "!"},
         {"INVERT",                 "~"},
         {"NEGATE",                 "-"},
         {"DEREFERENCE",            "*"},
@@ -403,7 +410,6 @@ private:
         {"COMMA",                  ","},
         {"SEMICOLON",              ";"},
         {"COLON",                  ":"},
-        {"QUESTION",               "?"},
         {"HASH",                   "#"},
         {"DOLLAR_SIGN",            "$"},
         {"AT",                     "@"},
@@ -428,6 +434,32 @@ private:
         {"CHARACTER_ESCAPE_SEQUENCE",        nullptr},
     };
 public:
+
+
+    ///
+    /// Shared
+    ///
+
+
+    static
+    constexpr
+    Range<MjTokenKind> reserved_names() noexcept {
+        return Range<MjTokenKind>(AND, MjTokenKind(UNINITIALIZED + 1));
+    }
+
+
+    static
+    constexpr
+    Range<MjTokenKind> keywords() noexcept {
+        return Range<MjTokenKind>(AND, MjTokenKind(YIELD + 1));
+    }
+
+
+    static
+    constexpr
+    Range<MjTokenKind> operators() noexcept {
+        return Range<MjTokenKind>(INVERT, MjTokenKind(NOT_EQUAL + 1));
+    }
 
 
     ///
@@ -483,7 +515,7 @@ public:
 
     constexpr
     bool is_identifier() const noexcept {
-        return _id - INVALID_IDENTIFIER < MODULE_NAME - INVALID_IDENTIFIER;
+        return _id - INVALID_IDENTIFIER < TYPE_NAME - INVALID_IDENTIFIER;
     }
 
 
@@ -500,18 +532,6 @@ public:
 
 
     constexpr
-    bool requires_leading_whitespace() const noexcept {
-        return DATA[_id].flags & 1;
-    }
-
-
-    constexpr
-    bool requires_trailing_whitespace() const noexcept {
-        return DATA[_id].flags & 2;
-    }
-
-
-    constexpr
     bool is_fixed_size() const noexcept {
         return DATA[_id].text.is_empty();
     }
@@ -523,16 +543,10 @@ public:
     }
 
 
-    constexpr
-    bool requires_trailing_whitespace() const noexcept {
-        return DATA[_id].flags & 2;
-    }
-
-
-    constexpr
-    u8 encoded_size() const noexcept {
-        return DATA[_id].flags & 3;
-    }
+    //constexpr
+    //u8 encoded_size() const noexcept {
+    //    return DATA[_id].flags & 3;
+    //}
 
 
     constexpr
@@ -554,9 +568,9 @@ public:
 
 
     /// Return true if there is canonical whitespace between the given tokens.
-    static
-    constexpr
-    bool whitespace(MjTokenKind a, MjTokenKind b) noexcept {
-        return DATA[a].flags & DATA[b].flags;
-    }
+    //static
+    //constexpr
+    //bool whitespace(MjTokenKind a, MjTokenKind b) noexcept {
+    //    return DATA[a].flags & DATA[b].flags;
+    //}
 };

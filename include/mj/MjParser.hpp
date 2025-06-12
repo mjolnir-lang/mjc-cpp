@@ -1,6 +1,8 @@
 #pragma once
 
-#include <mj/ast/MjFile.hpp>
+#include <mj/MjItemManager.hpp>
+
+#include <mj/ast/MjSourceFile.hpp>
 #include <mj/ast/MjProgram.hpp>
 #include <mj/ast/MjTypeAlias.hpp>
 #include <mj/ast/MjTypeTemplate.hpp>
@@ -35,7 +37,8 @@ public:
 // The parser consumes the output of the lexer and emits the AST components while controlling the parsing context.
 class MjParser {
 private:
-    const MjFile &_file;
+    MjItemManager &_item_manager;
+    const MjSourceFile &_file;
     Vector<MjParseError> _errors;
     MjProgram _program;
     MjToken _token;
@@ -43,16 +46,33 @@ public:
 
 
     static    
-    MjProgram parse(const MjFile &file) noexcept;
+    MjProgram parse(MjItemManager &item_manager, const MjSourceFile &file) noexcept;
 
 
 private:
 
 
-    MjParser(const MjFile &file) noexcept :
+    MjParser(MjItemManager &item_manager, const MjSourceFile &file) noexcept :
+        _item_manager(item_manager),
         _file(file),
         _token(_file.tokens().data())
     {}
+
+
+    ///
+    /// Item Allocation
+    ///
+
+
+    template<IsMjItem T, class... Args>
+    T *new_item(Args... args) noexcept {
+        return _item_manager.new_item<T>(args...);
+    }
+
+
+    ///
+    /// Error
+    ///
 
 
     void error(StringView message) noexcept;
@@ -228,7 +248,7 @@ private:
     /// ```
     ///
     /// @return 
-    void parse_type_enumeration(MjType &type) noexcept;
+    MjTypeEnumeration *parse_type_enumeration() noexcept;
 
 
     /// @brief Parse a type implementation.
@@ -240,7 +260,7 @@ private:
     /// ```
     ///
     /// @return 
-    void parse_type_implementation(MjType &type) noexcept;
+    MjTypeImplementation *parse_type_implementation() noexcept;
 
 
     ///
@@ -249,7 +269,7 @@ private:
 
 
     /// @brief Parse a type expression.
-    MjType *parse_type_expression() noexcept;
+    MjTypeExpression *parse_type_expression() noexcept;
 
 
     /// @brief Parse a generic type name.
@@ -258,7 +278,7 @@ private:
     /// TypeName<TypeArguments>
     /// TypeName<TypeParameters>
     /// ```
-    MjType *parse_type_name() noexcept;
+    MjTypeName *parse_type_name() noexcept;
 
 
     MjType *parse_type() noexcept;

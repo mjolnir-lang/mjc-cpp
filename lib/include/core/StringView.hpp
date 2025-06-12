@@ -244,6 +244,26 @@ public:
 
 
     constexpr
+    void set_start(const u8 *start) noexcept {
+        _data.set_start(start);
+    }
+
+
+    constexpr
+    void set_end(const u8 *end) noexcept {
+        _data.set_end(end);
+    }
+
+
+
+
+
+
+
+
+
+
+    constexpr
     StringView shift_left(u32 offset) noexcept {
         return _data.shift_left(offset);
     }
@@ -675,8 +695,8 @@ StringView operator<<(StringView slice, u32 size) noexcept {
 
 
 // This must be here to avoid dependency cycles.
-//#include <std/StringParser.hpp>
-//#include <std/StringPrinter.hpp>
+//#include <io/StringParser.hpp>
+//#include <io/StringPrinter.hpp>
 
 
 ///

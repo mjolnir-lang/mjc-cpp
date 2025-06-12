@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mj/ast/MjTypeImplementationDefinition.hpp>
+#include <mj/ast/MjType.hpp>
 
 
 // The 'implementation' scope is a context for defining types, members,
@@ -16,8 +16,15 @@
 // implements INTERFACE<...> {
 //     ...
 // }
-class MjTypeImplementation {
+class MjTypeImplementation : public MjType {
 private:
-    MjTypeImplementationDefinition *_definition;
+    MjInterfaceType *_interface;
+    MjType *_target_type;
 public:
+
+
+    constexpr
+    MjTypeImplementation(Slice<const MjToken> tokens = nullptr) noexcept :
+        MjType(MjItemKind::TYPE_IMPLEMENTATION, tokens)
+    {}
 };

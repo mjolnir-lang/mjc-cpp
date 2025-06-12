@@ -1,21 +1,67 @@
 #pragma once
 
-#include <mj/ast/MjVariableDefinition.hpp>
-#include <mj/ast/MjObject.hpp>
+#include <mj/ast/MjType.hpp>
+
+
+/// lifetime
+template<class MjStorageClass>
+struct MjStorageLifetimeValues {
+    static constexpr MjStorageClass LOCAL{0};
+    static constexpr MjStorageClass GLOBAL{0};
+};
+
+
+/// linkage
+template<class MjStorageClass>
+struct MjStorageLinkageValues {
+    static constexpr MjStorageClass NONE{0};
+    static constexpr MjStorageClass INTERNAL{0};
+    static constexpr MjStorageClass EXTERNAL{0};
+};
+
+
+/// lifetime and linkage
+template<class MjStorageClass>
+struct MjStorageClassValues {
+    static constexpr MjStorageClass NONE{0};
+    static constexpr MjStorageClass REGISTER{0};
+    static constexpr MjStorageClass INTERNAL{0};
+    static constexpr MjStorageClass SHARED{0};
+};
+
+
+class MjStorageClass : public Enum<u8>, public MjStorageClassValues<MjStorageClass> {
+public:
+
+
+    constexpr
+    explicit
+    MjStorageClass(u8 id) noexcept : Enum(id) {}
+};
+
+
+
 
 
 /// @brief An `MjVariable` is an `MjObject` associated with an identifier.
-class MjVariable {
+class MjVariable : public MjItem {
 private:
-    MjVariableDefinition *_definition;
-    MjObject *_object;
-    MjType *_owner;        // The type that owns the member
+    MjToken _name;
+    MjType *_type;        // The type that owns the member
     bool _is_mutable;     // The property does not inherit the 'const'-ness of its owner (does not apply to references)
 public:
 
 
     constexpr
-    MjVariable(MjVariableDefinition *definition) noexcept : _definition(definition) {}
+    MjVariable(
+        MjToken name,
+        MjType *type,
+        Slice<const MjToken> tokens = nullptr
+    ) noexcept :
+        MjItem(MjItemKind::VARIABLE, tokens),
+        _name(name),
+        _type(type)
+    {}
 
 
     ///
@@ -38,68 +84,61 @@ public:
 
     constexpr
     bool has_comment() const {
-        return _definition->has_comment();
+        return;
     }
 
 
     /// The comment associated with the variable
     constexpr
     const MjComment *comment() const noexcept {
-        return _definition->comment();
+        return;
     }
 
 
     /// The comment associated with the variable
     constexpr
     MjComment *comment() noexcept {
-        return _definition->comment();
+        return;
     }
 
 
     /// The variable name
     constexpr
     const MjToken *name() const noexcept {
-        return _definition->name();
+        return;
     }
 
 
     constexpr
     const MjType *type() const noexcept {
-        return _definition->type();
+        return;
     }
 
 
     constexpr
     MjType *type() noexcept {
-        return _definition->type();
-    }
-
-
-    /// The temporary sequence of tokens that make the definition
-    constexpr
-    const MjVariableDefinition *definition() const noexcept {
-        return _definition;
+        return;
     }
 
 
     /// The absolute address of the variable storage
     constexpr
     u64 address() const noexcept {
-        return _object->address();
+        return;
     }
 
 
     /// The absolute address of the variable storage
     constexpr
     u64 offset() const noexcept {
-        return _object->offset();
+        return;
     }
 
 
     /// The absolute address of the variable storage
     constexpr
     u64 size() const noexcept {
-        return _object->size();
+        return;
     }
 
 

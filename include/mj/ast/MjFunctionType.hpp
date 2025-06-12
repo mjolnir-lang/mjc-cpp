@@ -12,7 +12,6 @@ private:
     u32 is_safe : 1;
     u32 is_method : 1;
     u32 is_pure : 1;
-    u32 is_volatile : 1;
     u32 is_const : 1;
     u32 is_variadic : 1;
     u32 is_inline : 1;
@@ -20,8 +19,11 @@ public:
 
 
     constexpr
-    MjFunctionType(MjFunctionParameterList function_parameter_list, MjType *return_type) noexcept :
-        MjType(), _function_parameter_list(function_parameter_list), _return_type(return_type)
+    MjFunctionType(
+        MjFunctionParameterList function_parameter_list,
+        MjType *return_type
+    ) noexcept :
+        MjType(MjTypeKind::FUNCTION_TYPE), _function_parameter_list(function_parameter_list), _return_type(return_type)
     {}
 
 
@@ -33,13 +35,6 @@ public:
     /// @brief Return true if the type is 'const' qualified.
     constexpr
     bool is_const_callable() const noexcept {
-        return false;
-    }
-
-
-    /// \brief Return true if the type is 'volatile' qualified.
-    constexpr
-    bool is_volatile_callable() const noexcept {
         return false;
     }
 

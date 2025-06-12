@@ -13,7 +13,6 @@ class MjFunction : public MjItem {
 private:
     MjFunctionType *_type;
     MjBlockStatement *_block_statement;
-    UnmanagedBox<u8> _data;
 
     u16 _comment_offset;
     u16 _template_offset;
@@ -29,7 +28,7 @@ public:
 
     constexpr
     MjFunction(const MjToken *name, Slice<const MjToken> tokens = nullptr) noexcept :
-        MjItem(MjItemKind::FUNCTION, tokens)
+        MjItem(MjItemKind::FUNCTION_TYPE, tokens)
     {}
 
 
@@ -45,12 +44,12 @@ public:
 
 
     const MjComment &comment() const noexcept {
-        return *reinterpret_cast<const MjComment *>(&_data[_comment_offset]);
+        return *reinterpret_cast<const MjComment *>(&_items[_comment_offset]);
     }
 
 
     MjComment &comment() noexcept {
-        return *reinterpret_cast<MjComment *>(&_data[_comment_offset]);
+        return *reinterpret_cast<MjComment *>(&_items[_comment_offset]);
     }
 
 
@@ -61,12 +60,12 @@ public:
 
 
     Slice<MjAnnotation *const> annotations() const noexcept {
-        return {reinterpret_cast<MjAnnotation *const *>(&_data[_annotations_offset]), _annotations_size};
+        return {reinterpret_cast<MjAnnotation *const *>(&_items[_annotations_offset]), _annotations_size};
     }
 
 
     Slice<MjAnnotation *> annotations() noexcept {
-        return {reinterpret_cast<MjAnnotation **>(&_data[_annotations_offset]), _annotations_size};
+        return {reinterpret_cast<MjAnnotation **>(&_items[_annotations_offset]), _annotations_size};
     }
 
 
@@ -77,7 +76,7 @@ public:
 
 
     const MjToken *name() const noexcept {
-        return *reinterpret_cast<const MjToken *const *>(&_data[_name_offset]);
+        return *reinterpret_cast<const MjToken *const *>(&_items[_name_offset]);
     }
 
 
@@ -94,12 +93,12 @@ public:
 
 
     MjFunctionTemplate *function_template() const noexcept {
-        return *reinterpret_cast<MjFunctionTemplate *const *>(&_data[_template_offset]);
+        return *reinterpret_cast<MjFunctionTemplate *const *>(&_items[_template_offset]);
     }
 
 
     MjFunctionTemplate *function_template() noexcept {
-        return *reinterpret_cast<MjFunctionTemplate **>(&_data[_template_offset]);
+        return *reinterpret_cast<MjFunctionTemplate **>(&_items[_template_offset]);
     }
 
 
@@ -111,22 +110,22 @@ public:
 
 
     MjTemplateArgumentList *template_argument_list() const noexcept {
-        return *reinterpret_cast<MjTemplateArgumentList *const *>(&_data[_template_argument_list_offset]);
+        return *reinterpret_cast<MjTemplateArgumentList *const *>(&_items[_template_argument_list_offset]);
     }
 
 
     MjTemplateArgumentList *template_argument_list() noexcept {
-        return *reinterpret_cast<MjTemplateArgumentList **>(&_data[_template_argument_list_offset]);
+        return *reinterpret_cast<MjTemplateArgumentList **>(&_items[_template_argument_list_offset]);
     }
 
 
     MjFunctionParameterList *parameter_list() const noexcept {
-        return *reinterpret_cast<MjFunctionParameterList *const *>(&_data[_parameter_list_offset]);
+        return *reinterpret_cast<MjFunctionParameterList *const *>(&_items[_parameter_list_offset]);
     }
 
 
     MjFunctionParameterList *parameter_list() noexcept {
-        return *reinterpret_cast<MjFunctionParameterList **>(&_data[_parameter_list_offset]);
+        return *reinterpret_cast<MjFunctionParameterList **>(&_items[_parameter_list_offset]);
     }
 
 
@@ -145,30 +144,6 @@ public:
     constexpr
     MjBlockStatement *body() const noexcept {
         return _block_statement;
-    }
-
-
-
-
-
-
-
-
-    constexpr
-    bool is_constructor() const noexcept {
-        return _type->is_constructor();
-    }
-
-
-    constexpr
-    bool is_destructor() const noexcept {
-        return _type->is_destructor();
-    }
-
-
-    constexpr
-    bool is_operator() const noexcept {
-        return _type->is_operator();
     }
 
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mj/ast/MjStatement.hpp>
 #include <mj/ast/MjType.hpp>
 
 
@@ -13,9 +14,7 @@ protected:
 
 
     constexpr
-    MjExpression(Slice<const MjToken> tokens) noexcept :
-        MjStatement(tokens)
-    {}
+    MjExpression(MjItemInfo item_info) noexcept : MjStatement(item_info) {}
 public:
 
 
@@ -28,10 +27,6 @@ public:
     Slice<const MjToken> tokens() const noexcept {
         return _tokens;
     }
-
-
-    virtual
-    bool is_deterministic() const noexcept = 0;
 
 
     virtual

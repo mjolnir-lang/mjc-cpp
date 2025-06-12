@@ -26,7 +26,7 @@ public:
         _size = st.st_size;
 
         // Open the file.
-        _fd = FileSystem::open(path.c_str(), O_RDWR, 0);
+        _fd = System::open(path.c_str(), O_RDWR, 0);
 
         if (_fd == -1) {
             return;
@@ -96,17 +96,17 @@ public:
     ///
 
 
-    void write(Slice<const u8> data) noexcept noexcept {
+    void write(Slice<const u8> data) noexcept {
         ;
     }
 
 
-    void write(const u8 *data, u32 size) noexcept noexcept {
+    void write(const u8 *data, u32 size) noexcept {
         write({data, size});
     }
 
 
-    void write(u8 byte) noexcept noexcept {
+    void write(u8 byte) noexcept {
         write({&byte, 1});
     }
 

@@ -9,8 +9,9 @@ private:
 protected:
 
 
+    constexpr
     MjPointerType(MjType *base_type, MjTypeQualifiers type_qualifiers = MjTypeQualifiers::NONE) noexcept :
-        MjType(MjTypeKind::POINTER, type_qualifiers),
+        MjType(MjItemKind::POINTER_TYPE),
         _base_type(base_type)
     {}
 

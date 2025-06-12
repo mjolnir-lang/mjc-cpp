@@ -88,13 +88,15 @@
 
 ## Keywords
 
-| Token       | Keyword     | Variable | Function | Template |
+### Builtin Type Names
+
+| Token       | After       | Variable | Function | Template |
 | ----------- | ----------- | -------- | -------- | -------- |
 | `bool`      |             | -        | -        | -        |
-| `f16`       |             | -        | -        | -        |
-| `f32`       |             | -        | -        | -        |
-| `f64`       |             | -        | -        | -        |
-| `f128`      |             | -        | -        | -        |
+| `f16`       | `x1`,`x2`,`x4`,`x8`,`x16`    | -        | -        | -        |
+| `f32`       | `x1`,`x2`,`x4`,`x8`            | -        | -        | -        |
+| `f64`       | `x1`,`x2`,`x4`,`x8`            | -        | -        | -        |
+| `f128`      | `x1`,`x2`,`x4`            | -        | -        | -        |
 | `i8`        |             | -        | -        | -        |
 | `i16`       |             | -        | -        | -        |
 | `i32`       |             | -        | -        | -        |
@@ -106,36 +108,86 @@
 | `u64`       |             | -        | -        | -        |
 | `u128`      |             | -        | -        | -        |
 | `void`      |             | -        | -        | -        |
-| `break`     |             | -        | yes      | yes      |
-| `continue`  |             | -        | yes      | yes      |
-| `fail`      |             | -        | yes      | yes      |
-| `return`    |             | -        | yes      | yes      |
-| `yield`     |             | -        | yes      | yes      |
-| `bitfield`  | `<`         | yes      | yes      | -        |
-| `impl`      | `<`         | yes      | yes      | -        |
-| `where`     | `<`         | yes      | yes      | -        |
-| `enum`      | `<`,T       | yes      | yes      | -        |
-| `type`      | `<`,T       | yes      | yes      | -        |
-| `unit`      | `<`,U       | yes      | yes      | -        |
-| `union`     | `<`,`{`,T,V | yes      | yes      | -        |
-| `for`       | `\s(`       | yes      | yes      | yes      |
-| `if`        | `\s(`       | yes      | yes      | yes      |
-| `match`     | `\s(`       | yes      | yes      | yes      |
-| `until`     | `\s(`       | yes      | yes      | yes      |
-| `while`     | `\s(`       | yes      | yes      | yes      |
-| `asm`       | `{`         | yes      | yes      | yes      |
-| `do`        | `{`         | yes      | yes      | yes      |
-| `else`      | `{`         | yes      | yes      | yes      |
-| `class`     | `{`,T,V     | yes      | yes      | yes      |
-| `import`    | `{`,T,V     | yes      | yes      | yes      |
-| `interface` | `{`,T,V     | yes      | yes      | yes      |
-| `struct`    | `{`,T,V     | yes      | yes      | yes      |
-| `as`        | T           | yes      | yes      | yes      |
-| `const`     | T           | yes      | yes      | yes      |
-| `is`        | T           | yes      | yes      | yes      |
-| `mutable`   | T           | yes      | yes      | yes      |
-| `safe`      | T           | yes      | yes      | yes      |
-| `volatile`  | T           | yes      | yes      | yes      |
+
+### Control Flow Keywords (Non-variable)
+
+| Token       | Keyword | Variable | Function | Template |
+| ----------- | ------- | -------- | -------- | -------- |
+| `and`       | yes     | -        | yes      | yes      |
+| `break`     | yes     | -        | yes      | yes      |
+| `case`      | yes     | -        | yes      | yes      |
+| `continue`  | yes     | -        | yes      | yes      |
+| `else`      | yes     | -        | yes      | yes      |
+| `fail`      | yes     | -        | yes      | yes      |
+| `not`       | yes     | -        | yes      | yes      |
+| `or`        | yes     | -        | yes      | yes      |
+| `return`    | yes     | -        | yes      | yes      |
+| `then`      | yes     | -        | yes      | yes      |
+| `yield`     | yes     | -        | yes      | yes      |
+
+### Control Flow Keywords (after expression)
+
+Expressions cannot be else, and, or, then, case
+
+| Token       | Keyword     | Variable | Function | Template |
+| ----------- | ----------- | -------- | -------- | -------- |
+| `for`       | # E         | yes      | yes      | yes      |
+| `if`        | # E         | yes      | yes      | yes      |
+| `in`        | `for` T V # | yes      | yes      | yes      |
+| `match`     | # E         | yes      | yes      | yes      |
+| `until`     | # E         | yes      | yes      | yes      |
+| `while`     | # E         | yes      | yes      | yes      |
+
+### Type Definition Keywords (Non-template)
+
+| Token       | Keyword       | Variable | Function | Template |
+| ----------- | ------------- | -------- | -------- | -------- |
+| `bitfield`  | # `<`         | yes      | yes      | -        |
+| `impl`      | # `<`         | yes      | yes      | -        |
+| `where`     | # `<`         | yes      | yes      | -        |
+| `enum`      | # `<`,T       | yes      | yes      | -        |
+| `type`      | # `<`,T       | yes      | yes      | -        |
+| `unit`      | # `<`,U       | yes      | yes      | -        |
+| `union`     | # `<`,`{`,T,V | yes      | yes      | -        |
+
+### Control Flow Keywords
+
+| Token       | Keyword     | Variable | Function | Template |
+| ----------- | ----------- | -------- | -------- | -------- |
+| `asm`       | # `{`       | yes      | yes      | yes      |
+| `do`        | # `{`       | yes      | yes      | yes      |
+| `class`     | # `{`,T,V   | yes      | yes      | yes      |
+| `import`    | # `{`,T,V   | yes      | yes      | yes      |
+| `interface` | # `{`,T,V   | yes      | yes      | yes      |
+| `struct`    | # `{`,T,V   | yes      | yes      | yes      |
+
+### Operator Keywords
+
+| Token       | Keyword     | Variable | Function | Template |
+| ----------- | ----------- | -------- | -------- | -------- |
+| `as`        | # T         | yes      | yes      | yes      |
+| `const`     | # T         | yes      | yes      | yes      |
+| `is`        | # T         | yes      | yes      | yes      |
+| `mutable`   | # T         | yes      | yes      | yes      |
+| `safe`      | # T         | yes      | yes      | yes      |
+
+## Separators
+
+| Token  | Name |
+| ------ | --------- |
+| `::`   | Shared Member Accessor  |
+| `.`    | Member Accessor         |
+| `,`    | Comma                   |
+| `;`    | Semicolon               |
+| `:`    | Colon                   |
+| `(`    | Open Parenthesis        |
+| `)`    | Close Parenthesis       |
+| `[`    | Open Square Bracket     |
+| `]`    | Close Square Bracket    |
+| `{`    | Open Curly Brace        |
+| `}`    | Close Curly Brace       |
+| `<`    | Open Angle Bracket      |
+| `>`    | Close Angle Bracket     |
 
 ## Operators
 
@@ -154,78 +206,60 @@ Operator Kind
   - Before - Postfix
   - After - Whitespace/Newline/Postfix/Separator
 
-| Before   | Token  | After    | Name |
+| Before   | Token  | After    | Name     |
 | -------- | ------ | -------- | -------- |
-| `\s`,`(` | `!`    | `a`      | Not                |
-| `\s`,`(` | `~`    | `a`      | Invert             |
-| `\s`,`(` | `-`    | `a`      | Negate             |
-| `\s`,`(` | `*`    | `a`      | Deref              |
-| `\s`,`(` | `&`    | `a`      | Ref                |
-| `a`      | `++`   | `\s`,`)` |          |
-| `a`      | `--`   | `\s`,`)` |          |
-| `f`      | `&`    | `\s`,`)` |          |
-| `T`      | `*`    | `\s`,`)` |          |
-| `T`      | `&`    | `\s`,`)` |          |
-| `T`      | `?`    | `\s`,`)` |          |
-| `T`      | `!`    | `\s`,`)` |          |
-| `\s`,`(` | `=`    | `\s`,`)` |          |
-| `\s`,`(` | `==`   | `\s`,`)` |          |
-| `\s`,`(` | `=>`   | `\s`,`)` |          |
-| `\s`,`(` | `<`    | `\s`,`)` |          |
-| `\s`,`(` | `<<`   | `\s`,`)` |          |
-| `\s`,`(` | `<<=`  | `\s`,`)` |          |
-| `\s`,`(` | `<=`   | `\s`,`)` |          |
-| `\s`,`(` | `<=>`  | `\s`,`)` |          |
-| `\s`,`(` | `>`    | `\s`,`)` |          |
-| `\s`,`(` | `>>`   | `\s`,`)` |          |
-| `\s`,`(` | `>>=`  | `\s`,`)` |          |
-| `\s`,`(` | `>=`   | `\s`,`)` |          |
-| `\s`,`(` | `*`    | `\s`,`)` |          |
-| `\s`,`(` | `*=`   | `\s`,`)` |          |
-| `\s`,`(` | `/`    | `\s`,`)` |          |
-| `\s`,`(` | `/=`   | `\s`,`)` |          |
-| `\s`,`(` | `%`    | `\s`,`)` |          |
-| `\s`,`(` | `%=`   | `\s`,`)` |          |
-| `\s`,`(` | `+`    | `\s`,`)` |          |
-| `\s`,`(` | `+=`   | `\s`,`)` |          |
-| `\s`,`(` | `-`    | `\s`,`)` |          |
-| `\s`,`(` | `-=`   | `\s`,`)` |          |
-| `\s`,`(` | `&`    | `\s`,`)` |          |
-| `\s`,`(` | `&=`   | `\s`,`)` |          |
-| `\s`,`(` | `\|`   | `\s`,`)` |          |
-| `\s`,`(` | `\|=`  | `\s`,`)` |          |
-| `\s`,`(` | `^`    | `\s`,`)` |          |
-| `\s`,`(` | `^=`   | `\s`,`)` |          |
-| `\s`,`(` | `&&`   | `\s`,`)` |          |
-| `\s`,`(` | `\|\|` | `\s`,`)` |          |
-| `\s`,`(` | `!=`   | `\s`,`)` |          |
-| `\s`,`(` | `?`    | `\s`,`)` |          |
-| `\s`,`(` | `:`    | `\s`,`)` |          |
+| `_`,`(`  | `~`    | `a`      | Invert   |
+| `_`,`(`  | `-`    | `a`      | Negate   |
+| `_`,`(`  | `*`    | `a`      | Deref    |
+| `_`,`(`  | `&`    | `a`      | Ref      |
+| `a`      | `++`   | `_`,`)`  | Inc         |
+| `a`      | `--`   | `_`,`)`  | Dec         |
+| `f`      | `&`    | `_`,`)`  | Function Ref         |
+| `T`      | `*`    | `_`,`)`  | Pointer         |
+| `T`      | `&`    | `_`,`)`  | Reference         |
+| `T`      | `?`    | `_`,`)`  | Fallible         |
+| `T`      | `!`    | `_`,`)`  | No Return |
+| `_`,`(`  | `=`    | `_`,`)`  | Assign         |
+| `_`,`(`  | `==`   | `_`,`)`  | Equal         |
+| `_`,`(`  | `=>`   | `_`,`)`  | Lambda         |
+| `_`,`(`  | `<`    | `_`,`)`  | Less Than         |
+| `_`,`(`  | `<<`   | `_`,`)`  | Left Shift         |
+| `_`,`(`  | `<<=`  | `_`,`)`  | Left Shift Assignment         |
+| `_`,`(`  | `<=`   | `_`,`)`  |          |
+| `_`,`(`  | `<=>`  | `_`,`)`  |          |
+| `_`,`(`  | `>`    | `_`,`)`  |          |
+| `_`,`(`  | `>>`   | `_`,`)`  |          |
+| `_`,`(`  | `>>=`  | `_`,`)`  |          |
+| `_`,`(`  | `>=`   | `_`,`)`  |          |
+| `_`,`(`  | `*`    | `_`,`)`  |          |
+| `_`,`(`  | `*=`   | `_`,`)`  |          |
+| `_`,`(`  | `/`    | `_`,`)`  |          |
+| `_`,`(`  | `/=`   | `_`,`)`  |          |
+| `_`,`(`  | `%`    | `_`,`)`  |          |
+| `_`,`(`  | `%=`   | `_`,`)`  |          |
+| `_`,`(`  | `+`    | `_`,`)`  |          |
+| `_`,`(`  | `+=`   | `_`,`)`  |          |
+| `_`,`(`  | `-`    | `_`,`)`  |          |
+| `_`,`(`  | `-=`   | `_`,`)`  |          |
+| `_`,`(`  | `&`    | `_`,`)`  |          |
+| `_`,`(`  | `&=`   | `_`,`)`  |          |
+| `_`,`(`  | `\|`   | `_`,`)`  |          |
+| `_`,`(`  | `\|=`  | `_`,`)`  |          |
+| `_`,`(`  | `^`    | `_`,`)`  |          |
+| `_`,`(`  | `^=`   | `_`,`)`  |          |
+| `_`,`(`  | `!=`   | `_`,`)`  | Not Equal |
 
-## Separators
+## Misc
 
 | Before   | Token  | After    | Name |
 | -------- | ------ | -------- | --------- |
-| `T`      | `::`   | `m`,`T`  | Shared Member Accessor  |
-| `a`      | `.`    | `m`      | Member Accessor         |
-|          | `,`    |          | Comma                   |
-|          | `;`    |          | Semicolon               |
-|          | `:`    |          | Colon                   |
 |          | `#!`   |          | Shebang                 |
-|          | `$`    | `\s`     | Shell Statement         |
+|          | `$`    | `_`      | Shell Statement         |
 |          | `$`    | `a`,`{`  | Shell Variable          |
 |          | `$`    | `(`      | Sub-shell Expression    |
-| `\s`,`(` | `-`    | `a`      | Shell Short Option      |
-| `\s`,`(` | `--`   | `a`      | Shell Long Option       |
+| `_`,`(`  | `-`    | `a`      | Shell Short Option      |
+| `_`,`(`  | `--`   | `a`      | Shell Long Option       |
 |          | `@`    |          | Decorator               |
-|          | `(`    |          | Open Parenthesis        |
-|          | `)`    |          | Close Parenthesis       |
-|          | `[`    |          | Open Square Bracket     |
-|          | `]`    |          | Close Square Bracket    |
-|          | `{`    |          | Open Curly Brace        |
-|          | `}`    |          | Close Curly Brace       |
-|          | `<`    |          | Open Angle Bracket      |
-|          | `>`    |          | Close Angle Bracket     |
 
 ## Names
 

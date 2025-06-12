@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mj/ast/MjTypeTemplate.hpp>
+#include <mj/ast/MjFunctionType.hpp>
 
 
 class MjFunctionTypeTemplate : public MjTypeTemplate {

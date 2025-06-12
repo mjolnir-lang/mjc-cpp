@@ -1,7 +1,18 @@
 #pragma once
 
-#include <mj/ast/MjTemplateArgument.hpp>
-#include <container/Vector.hpp>
+#include <mj/ast/MjItem.hpp>
 
 
-using MjTemplateArgumentList = Vector<MjTemplateArgument>;
+class MjTemplateArgumentList : public MjItem {
+private:
+    MjItem *_value;
+public:
+
+
+    constexpr
+    MjTemplateArgumentList(std::nullptr_t = nullptr) noexcept : _value(nullptr) {}
+
+
+    constexpr
+    MjTemplateArgumentList(MjItem *value) noexcept : _value(value) {}
+};

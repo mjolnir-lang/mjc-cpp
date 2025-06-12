@@ -911,6 +911,24 @@ public:
 
 
     ///
+    ///
+    ///
+
+
+    constexpr
+    void set_start(T *start) noexcept {
+        _size += start - _data;
+        _data = start;
+    }
+
+
+    constexpr
+    void set_end(T *end) noexcept {
+        _size = end - _data;
+    }
+
+
+    ///
     /// Iterator
     ///
 

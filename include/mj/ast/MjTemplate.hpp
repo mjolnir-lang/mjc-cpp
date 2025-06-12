@@ -1,12 +1,15 @@
 #pragma once
 
-#include <mj/ast/MjItem.hpp>
+#include <mj/ast/MjDeclaration.hpp>
 #include <mj/ast/MjTemplateArgumentList.hpp>
 #include <mj/ast/MjTemplateParameterList.hpp>
 
 
 /// A type consists of a type definition.
-class MjTemplate : public MjItem {
+class MjTemplate : public MjDeclaration {
+protected:
+    MjToken _template_name;
+    MjTemplateParameterList *_template_parameter_list;
 public:
 
 
@@ -16,7 +19,16 @@ public:
 
 
     constexpr
-    MjTemplate(MjItemKind item_kind) noexcept : MjItem(item_kind) {}
+    MjTemplate(
+        MjToken template_name,
+        MjTemplateParameterList *template_parameter_list,
+        MjItemKind item_kind,
+        Slice<const MjToken> tokens = nullptr
+    ) noexcept :
+        MjDeclaration(item_kind, tokens),
+        _template_parameter_list(template_parameter_list),
+        _template_name(template_name)
+    {}
 
 
     ///
@@ -24,12 +36,17 @@ public:
     ///
 
 
-    const MjTemplateParameterList &template_parameter_list() const noexcept {
+    MjToken template_name() const noexcept {
+        return _template_name;
+    }
+
+
+    const MjTemplateParameterList *template_parameter_list() const noexcept {
         return _template_parameter_list;
     }
 
 
-    MjTemplateParameterList &template_parameter_list() noexcept {
+    MjTemplateParameterList *template_parameter_list() noexcept {
         return _template_parameter_list;
     }
 };

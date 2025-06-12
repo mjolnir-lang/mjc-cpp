@@ -1,17 +1,17 @@
 #pragma once
 
-#include <mj/ast/MjFile.hpp>
+#include <mj/ast/MjSourceFile.hpp>
 
 
 // The parser consumes the output of the scanner and emits the AST components while controlling the parsing context.
 class MjFormatter {
 private:
-    const MjFile &_file;
+    const MjSourceFile &_file;
 public:
 
 
     static
-    std::string format_file(const MjFile &file) noexcept;
+    std::string format_file(const MjSourceFile &file) noexcept;
 
 
 private:
@@ -23,7 +23,7 @@ private:
 
 
     constexpr
-    MjFormatter(const MjFile &file) noexcept :
+    MjFormatter(const MjSourceFile &file) noexcept :
         _file(file)
     {}
 

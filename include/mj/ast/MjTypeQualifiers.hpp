@@ -7,9 +7,8 @@ template<class MjTypeQualifiers>
 struct MjTypeQualifiersValues {
     static constexpr MjTypeQualifiers NONE{0};
     static constexpr MjTypeQualifiers CONST{1};
-    static constexpr MjTypeQualifiers VOLATILE{2};
-    static constexpr MjTypeQualifiers MUTABLE{3};
-    static constexpr MjTypeQualifiers SAFE{4};
+    static constexpr MjTypeQualifiers MUTABLE{2};
+    static constexpr MjTypeQualifiers SAFE{3};
 };
 
 

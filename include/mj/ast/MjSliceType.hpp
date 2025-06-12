@@ -14,7 +14,7 @@ protected:
         MjType *base_type,
         MjTypeQualifiers type_qualifiers = MjTypeQualifiers::NONE
     ) noexcept :
-        MjType(MjTypeKind::ARRAY, type_qualifiers)
+        MjType(MjItemKind::SLICE_TYPE)
     {}
 
 

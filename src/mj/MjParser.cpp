@@ -1,20 +1,26 @@
 #include <mj/MjParser.hpp>
 
-#include <mj/ast/MjBitfieldTypeDefinition.hpp>
-#include <mj/ast/MjClassTypeDefinition.hpp>
-#include <mj/ast/MjFunctionDefinition.hpp>
+#include <mj/ast/MjBitfieldType.hpp>
+#include <mj/ast/MjClassType.hpp>
+#include <mj/ast/MjFunction.hpp>
 
 #include <mj/ast/MjImportDirective.hpp>
 
+// Expressions
+#include <mj/ast/MjBlockExpression.hpp>
+
+// Statements
 #include <mj/ast/MjBlockStatement.hpp>
 #include <mj/ast/MjBreakStatement.hpp>
 #include <mj/ast/MjContinueStatement.hpp>
-#include <mj/ast/MjDoStatement.hpp>
-#include <mj/ast/MjExpressionStatement.hpp>
+#include <mj/ast/MjDoLoop.hpp>
+#include <mj/ast/MjDoUntilLoop.hpp>
+#include <mj/ast/MjDoWhileLoop.hpp>
+#include <mj/ast/MjForLoop.hpp>
 #include <mj/ast/MjIfStatement.hpp>
 #include <mj/ast/MjReturnStatement.hpp>
-#include <mj/ast/MjUntilStatement.hpp>
-#include <mj/ast/MjWhileStatement.hpp>
+#include <mj/ast/MjUntilLoop.hpp>
+#include <mj/ast/MjWhileLoop.hpp>
 #include <mj/ast/MjYieldStatement.hpp>
 
 #include <filesystem>
@@ -25,7 +31,7 @@ void MjParser::error(StringView message) noexcept {
 }
 
 
-MjProgram MjParser::parse(const MjFile &file) noexcept {
+MjProgram MjParser::parse(MjItemManager &item_manager, const MjSourceFile &file) noexcept {
     MjProgram program{file};
     program.parse_module();
     return program;
@@ -51,7 +57,7 @@ MjModule *MjParser::parse_module(std::filesystem::path path) noexcept {
         return;
     }
 
-    MjModule *mod = new MjModule();
+    MjModule *mod = new_item<MjModule>();
     std::vector<std::filesystem::path> file_paths = std::filesystem::list_directory(path);
 
     // Verify module path.
@@ -96,41 +102,38 @@ MjModule *MjParser::parse_module(std::filesystem::path path) noexcept {
 
 
 MjItem *MjParser::parse_item() noexcept {
-    //switch () {}
-    return nullptr;
-}
-
-
-
-
-
-
-
-
-
-MjStatement *MjParser::parse_statement() noexcept {
-    const MjToken *start = _token;
+    MjToken start = _token;
+    u32 indent = 0;
     MjStatement *statement = nullptr;
 
-    switch (_token->kind()) {
+    switch (_token.kind()) {
     case MjTokenKind::OPEN_CURLY_BRACE: {
-        MjBlockStatement *statement = new MjBlockStatement();
+        skip_token();
+
+        MjBlockStatement *block_statement = new_item<MjBlockStatement>();
 
         while (true) {
+            if (parse_token(MjTokenKind::INDENT)) {
+                if (_token.indent() == indent + 1) {
+                    // body
+                } else {
+                    // end
+                }
+            }
             MjStatement *s = parse_statement();
 
             if (s == nullptr) {
                 break;
             }
 
-            statement->statements().append(s);
+            block_statement->add_item(s);
         }
 
         parse_token(MjTokenKind::CLOSE_CURLY_BRACE);
-        statement->set_tokens(tokens_since(start));
-        return statement;
+        block_statement->set_tokens(tokens_since(start));
+        return block_statement;
     } case MjTokenKind::BREAK: {
-        MjBreakStatement *statement = new MjBreakStatement();
+        MjBreakStatement *statement = new_item<MjBreakStatement>();
 
         if (match_token(MjTokenKind::INDENT)) {
             MjExpression *depth = parse_expression();
@@ -147,19 +150,19 @@ MjStatement *MjParser::parse_statement() noexcept {
         statement->set_tokens(tokens_since(start));
         return statement;
     } case MjTokenKind::CONTINUE: {
-        MjContinueStatement *statement = new MjContinueStatement();
+        MjContinueStatement *statement = new_item<MjContinueStatement>();
         MjExpression *depth = parse_expression();
         statement->set_depth(depth);
         statement->set_tokens(tokens_since(start));
         return statement;
     } case MjTokenKind::CLASS: {
-        MjClassDefinition *statement = new MjClassDefinition();
+        MjClassType *statement = new_item<MjClassType>();
 
         // Consume the 'class' token.
-        const MjToken *class_start = parse_token(MjTokenKind::CLASS);
+        MjToken class_start = parse_token(MjTokenKind::CLASS);
 
         // Parse the name of the class type.
-        const MjToken *class_name = parse_token(MjTokenKind::TYPE_NAME);
+        MjToken class_name = parse_token(MjTokenKind::TYPE_NAME);
 
         if (class_name == nullptr) {
             error("Expected a type name after 'class'!");
@@ -182,25 +185,25 @@ MjStatement *MjParser::parse_statement() noexcept {
 
         // Parse the optional inline variable declaration.
         if (match_token(MjTokenKind::VARIABLE_NAME) || match_token(MjTokenKind::CONSTANT_NAME)) {
-            const MjToken *instance_name = parse_token();
+            MjToken instance_name = parse_token();
         }
 
         // Parse the class type definition.
         while (true) {
             MjStatement *s = parse_statement();
 
-            switch (s->type()) {
-            case MjStatementType::STRUCTURE_DEFINITION:
+            switch (s->item_kind()) {
+            case MjItemKind::STRUCTURE_TYPE:
                 break;
-            case MjStatementType::UNION_DEFINITION:
+            case MjItemKind::UNION_TYPE:
                 break;
-            case MjStatementType::CLASS_DEFINITION:
+            case MjItemKind::CLASS_TYPE:
                 break;
-            case MjStatementType::ENUMERATION_DEFINITION:
+            case MjItemKind::ENUMERATION_TYPE:
                 break;
             }
 
-            statement->block_statements().append(s);
+            statement->add_item(s);
         }
 
         statement->set_tokens(tokens_since(start));
@@ -211,9 +214,9 @@ MjStatement *MjParser::parse_statement() noexcept {
             return nullptr;
         }
 
-        MjStatement *body = parse_statement();
-        Slice<const MjToken> tokens = Slice<const MjToken>(_token, 1);
-        MjStatement *statement = new MjStatement(MjStatementType::DO);
+        MjBlockStatement *body_statement = parse_statement();
+        Slice<MjToken> tokens = Slice<MjToken>(_token, 1);
+        MjStatement *statement = new_item<MjDoLoop>(body_statement, tokens);
     } case MjTokenKind::ELSE: {
         // should not get here!
         error("Keyword 'else' must follow 'if' block!");
@@ -226,11 +229,13 @@ MjStatement *MjParser::parse_statement() noexcept {
     } case MjTokenKind::FAIL: {
         return parse_fail_statement();
     } case MjTokenKind::FOR: {
-        // 
+        // for-in statement
+        MjForStatement for_statement = new_item<MjForLoop>();
     } case MjTokenKind::IF: {
-        // Always succeeds.
-        parse_token(MjTokenKind::OPEN_PARENTHESIS);
 
+        // This is either an if-expression or an if-statement.
+
+        // `if` keyword is guaranteed to be followed by something that looks like an expression.
         MjExpression *condition = parse_expression();
 
         if (condition == nullptr) {
@@ -238,34 +243,29 @@ MjStatement *MjParser::parse_statement() noexcept {
             return nullptr;
         }
 
-        if (!parse_token(MjTokenKind::CLOSE_PARENTHESIS)) {
-            error("Missing ')'!");
+        MjThenStatement *then_statement = parse_then_statement();
+
+        if (then_statement == nullptr) {
+            error("Missing if-then statement!");
             return nullptr;
         }
 
-        MjStatement *if_block = parse_block_statement();
-
-        if (if_block == nullptr) {
-            error("Missing if block statement!");
-            return nullptr;
-        }
-
-        MjStatement *else_block = nullptr;
+        MjElseStatement *else_statement = nullptr;
 
         if (parse_token(MjTokenKind::ELSE)) {
-            else_block = parse_block_statement();
+            else_statement = parse_else_statement();
 
-            if (else_block == nullptr) {
-                else_block = parse_if_statement();
+            if (else_statement == nullptr) {
+                else_statement = parse_if_statement();
             }
 
-            if (else_block == nullptr) {
+            if (else_statement == nullptr) {
                 error("Expected an 'if' statement or a 'block' statement after 'else'!");
                 return nullptr;
             }
         }
 
-        return &MjStatement(nullptr, condition, if_block, else_block);
+        return new_item<MjIfStatement>(condition, then_statement, else_statement);
     } case MjTokenKind::IMPL: {
         // 
     } case MjTokenKind::IMPORT: {
@@ -275,11 +275,11 @@ MjStatement *MjParser::parse_statement() noexcept {
         // Parse module imports
         while (parse_token(MjTokenKind::IMPORT)) {
             while (parse_token(MjTokenKind::SEMICOLON)) {
-                const MjToken *token = parse_token();
+                MjToken token = parse_token();
 
-                switch (token->kind) {
+                switch (token.kind()) {
                 case MjTokenKind::IDENTIFIER:
-                    path.append(token->str());
+                    path.append(token.string_id());
                     break;
                 case MjTokenKind::MINUS:
                     path.append('-', true);
@@ -297,7 +297,7 @@ MjStatement *MjParser::parse_statement() noexcept {
         MjModule mod(path);
 
         // Parse module global scope
-        return new MjStatement(MjStatementType::IMPORT);
+        return new_item<MjImportDirective>();
     } case MjTokenKind::INTERFACE: {
         // Only at module scope!
     } case MjTokenKind::MATCH: {
@@ -308,7 +308,7 @@ MjStatement *MjParser::parse_statement() noexcept {
             ;
         }
     } case MjTokenKind::RETURN: {
-        return new MjStatement(MjStatementType::RETURN, parse_expression());
+        return new_item<MjReturnStatement>(parse_expression());
     } case MjTokenKind::STRUCT: {
         // 
     } case MjTokenKind::TYPE: {
@@ -327,18 +327,16 @@ MjStatement *MjParser::parse_statement() noexcept {
             error("Missing type expression!");
         }
 
-        const MjToken *type_name = parse_token(MjTokenKind::TYPE_NAME);
+        MjToken type_name = parse_token(MjTokenKind::TYPE_NAME);
 
         if (type == nullptr) {
             error("Missing type expression!");
         }
 
-        return new MjType(MjTypeType::ALIAS, type_name, type);
+        return new_item<MjTypeAlias>(type_name, type);
     } case MjTokenKind::UNION: {
         // 
     } case MjTokenKind::UNTIL: {
-        // 
-    } case MjTokenKind::VARIANT: {
         // 
     } case MjTokenKind::WHILE: {
         if (parse_token(MjTokenKind::OPEN_PARENTHESIS) == nullptr) {
@@ -352,7 +350,7 @@ MjStatement *MjParser::parse_statement() noexcept {
         }
 
         MjStatement *loop_body = parse_block_statement();
-        return new MjStatement(MjStatementType::WHILE, loop_condition, loop_body);
+        return new_item<MjWhileStatement>(loop_condition, loop_body);
     } case MjTokenKind::YIELD: {
         MjExpression *return_value = parse_expression();
 
@@ -360,7 +358,7 @@ MjStatement *MjParser::parse_statement() noexcept {
             ;
         }
 
-        return new MjYieldStatement(return_value);
+        return new_item<MjYieldStatement>(return_value);
     }
     }
 
@@ -395,9 +393,9 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     ///
     /// 
     MjExpression *lhs = nullptr;
-    const MjToken *start = _token;
+    MjToken start = _token;
 
-    switch (_token->kind()) {
+    switch (_token.kind()) {
 
     case MjTokenKind::OPEN_CAST: {
         parse_token();
@@ -410,16 +408,16 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     case MjTokenKind::TYPE_NAME: {
         MjType *type = parse_type();
 
-        switch (_token->kind()) {
+        switch (_token.kind()) {
         case MjTokenKind::OPEN_PARENTHESIS: {
             MjFunctionParameterList *fpl = parse_function_parameter_list();
-            lhs = new MjExpression(tokens_since(start), type, fpl);
+            lhs = new_item<MjExpression>(tokens_since(start), type, fpl);
             break;
         }
 
         case MjTokenKind::OPEN_CURLY_BRACE: {
             MjStatement *statement = parse_statement();
-            lhs = new MjExpression(tokens_since(start), type, statement);
+            lhs = new_item<MjExpression>(tokens_since(start), type, statement);
             break;
         }
         default:
@@ -432,9 +430,9 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     case MjTokenKind::MODULE_NAME: {
         MjType *type = parse_type();
 
-        switch (_token->kind()) {
+        switch (_token.kind()) {
         case MjTokenKind::SCOPE: {
-            lhs = new MjExpression(tokens_since(start), type);
+            lhs = new_item<MjExpression>(tokens_since(start), type);
             break;
         }
         default:
@@ -446,7 +444,7 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
 
     case MjTokenKind::UNINITIALIZED: {
         parse_token();
-        lhs = new MjExpression(tokens_since(start), new MjVariable());
+        lhs = new_item<MjExpression>(tokens_since(start), new_item<MjVariable>());
         break;
     }
 
@@ -454,7 +452,7 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     case MjTokenKind::FALSE:
     case MjTokenKind::NULL_: {
         parse_token();
-        lhs = new MjExpression(tokens_since(start), new MjVariable());
+        lhs = new_item<MjExpression>(tokens_since(start), new_item<MjVariable>());
         break;
     }
 
@@ -462,14 +460,14 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     case MjTokenKind::RAW_STRING_LITERAL:
     case MjTokenKind::INTERPOLATED_STRING_LITERAL: {
         String string = token_text();
-        MjVariable *string_literal = new MjStringLiteral(parse_token(), std::move(string));
-        lhs = new MjExpression(tokens_since(start), string_literal);
+        MjVariable *string_literal = new_item<MjStringLiteral>(parse_token(), std::move(string));
+        lhs = new_item<MjExpression>(tokens_since(start), string_literal);
         break;
     }
 
     case MjTokenKind::NUMERIC_LITERAL: {
-        MjVariable *number_literal = new MjNumberLiteral(*parse_token());
-        lhs = new MjExpression(tokens_since(start), number_literal);
+        MjVariable *number_literal = new_item<MjNumberLiteral>(parse_token());
+        lhs = new_item<MjExpression>(tokens_since(start), number_literal);
         break;
     }
 
@@ -481,14 +479,14 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
     }
 
     case MjTokenKind::VARIABLE_NAME: {
-        MjVariable *variable = new MjVariable(Slice<const MjToken>(parse_token(), 1));
-        lhs = new MjExpression(tokens_since(start), variable);
+        MjVariable *variable = new_item<MjVariable>(parse_token());
+        lhs = new_item<MjExpression>(tokens_since(start), variable);
         break;
     }
 
     case MjTokenKind::CONSTANT_NAME: {
-        MjVariable *constant = new MjVariable(Slice<const MjToken>(parse_token(), 1));
-        lhs = new MjExpression(tokens_since(start), constant);
+        MjVariable *constant = new_item<MjVariable>(parse_token());
+        lhs = new_item<MjExpression>(tokens_since(start), constant);
         break;
     }
 
@@ -497,16 +495,16 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
         MjTemplateArgumentList *template_argument_list = nullptr;
         MjFunctionArgumentList *function_argument_list = nullptr;
 
-        if (_token->kind == MjTokenKind::OPEN_ANGLE_BRACKET) {
+        if (_token.kind() == MjTokenKind::OPEN_ANGLE_BRACKET) {
             template_argument_list = parse_template_argument_list();
         }
 
-        if (_token->kind == MjTokenKind::OPEN_PARENTHESIS) {
+        if (_token.kind() == MjTokenKind::OPEN_PARENTHESIS) {
             function_argument_list = parse_function_argument_list();
         }
 
-        MjFunction *function = new MjFunction(tokens_since(start), function_name, template_argument_list);
-        lhs = new MjExpression(tokens_since(start), function, function_argument_list);
+        MjFunction *function = new_item<MjFunction>(tokens_since(start), function_name, template_argument_list);
+        lhs = new_item<MjExpression>(tokens_since(start), function, function_argument_list);
         break;
     }
 
@@ -516,11 +514,11 @@ MjExpression *MjParser::parse_expression(u32 min_bp) {
 
     // 
     while (true) {
-        if (_token->kind() == MjTokenKind::NONE) {
+        if (_token.kind() == MjTokenKind::NONE) {
             break;
         }
 
-        if (!_token->kind().is_operator()) {
+        if (!_token.kind().is_operator()) {
             error("Expected an operator!");
             return nullptr;
         }
@@ -813,7 +811,7 @@ MjType *MjParser::parse_type_definition() noexcept {
 
 MjBitfieldType *MjParser::parse_bitfield_type_definition() noexcept {
     parse_token(MjTokenKind::BITFIELD);
-    const MjToken *name = parse_token(MjTokenKind::TYPE_NAME);
+    MjToken name = parse_token(MjTokenKind::TYPE_NAME);
     //templates;
     parse_token(MjTokenKind::OPEN_ANGLE_BRACKET);
 
@@ -828,7 +826,7 @@ MjBitfieldType *MjParser::parse_bitfield_type_definition() noexcept {
         field_comment = parse_comment();
 
         // Parse attributes.
-        while (peek_token() == MjTokenKind::AT) {
+        while (peek_token().kind() == MjTokenKind::AT) {
             field_annotation = parse_annotation();
 
             if (!field_annotation) {
@@ -894,7 +892,7 @@ bool MjParser::verify_bitfield_type_definition(const MjBitfieldType &bitfield) n
 //     - Parse the member, shared, and implementation definitions
 MjClassType *MjParser::parse_class_type_definition() noexcept {
     parse_token(MjTokenKind::CLASS);
-    const MjToken *name = parse_token(MjTokenKind::TYPE_NAME);
+    MjToken name = parse_token(MjTokenKind::TYPE_NAME);
     //templates;
     parse_token(MjTokenKind::OPEN_ANGLE_BRACKET);
 
@@ -904,15 +902,15 @@ MjClassType *MjParser::parse_class_type_definition() noexcept {
 
     // Scan the class.
     while (true) {
-        const MjToken *token = peek_token();
+        MjToken token = peek_token();
 
-        if (token->kind() == MjTokenKind::CLOSE_CURLY_BRACE) {
+        if (token.kind() == MjTokenKind::CLOSE_CURLY_BRACE) {
             break;
-        } else if (token->kind() == MjTokenKind::SHARED) {
+        } else if (token.kind() == MjTokenKind::SHARED) {
             ;
-        } else if (token->kind() == MjTokenKind::IMPLEMENTS) {
+        } else if (token.kind() == MjTokenKind::IMPLEMENTS) {
             ;
-        } else if (token->kind() == MjTokenKind::TYPE) {
+        } else if (token.kind() == MjTokenKind::TYPE) {
             next_token();
             typevar = parse_variable();
             types.append(MjType(typevar.name, ));
@@ -928,17 +926,17 @@ MjClassType *MjParser::parse_class_type_definition() noexcept {
                     while (depth) {
                         token = next_token();
 
-                        if (token->kind() == MjTokenKind::OPEN_CURLY_BRACE) {
+                        if (token.kind() == MjTokenKind::OPEN_CURLY_BRACE) {
                             depth += 1;
-                        } else if (token->kind() == MjTokenKind::OPEN_CURLY_BRACE) {
+                        } else if (token.kind() == MjTokenKind::OPEN_CURLY_BRACE) {
                             depth -= 1;
                         }
 
                         method_body.append(token);
                     }
-                } else if (token == MjTokenKind::SET) {
+                } else if (token.kind() == MjTokenKind::SET) {
                     ;
-                } else if (token == MjTokenKind::SEMICOLON) {
+                } else if (token.kind() == MjTokenKind::SEMICOLON) {
                     // Method declarations belong in interfaces!
                     raise SyntaxError("Classes may not contain method declarations!");
                 }
@@ -961,7 +959,7 @@ MjStructureType *MjParser::parse_structure_type_definition() {
         return;
     }
 
-    const MjToken *name = parse_token(MjTokenKind::TYPE_NAME);
+    MjToken name = parse_token(MjTokenKind::TYPE_NAME);
 
     if (name != nullptr) {
         // Check for either a template argument list or a template parameter list.
@@ -984,7 +982,7 @@ MjStructureType *MjParser::parse_structure_type_definition() {
     MjType structure_type = MjType(MjTypeType::STRUCTURE, name, comment, annotations);
 
     // Check for an optional inline instance declaration.
-    const MjToken *instance_name = parse_token(MjTokenKind::VARIABLE_NAME);
+    MjToken instance_name = parse_token(MjTokenKind::VARIABLE_NAME);
 
     if (instance_name == nullptr) {
         instance_name = parse_token(MjTokenKind::CONSTANT_NAME);

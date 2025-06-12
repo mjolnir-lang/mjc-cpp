@@ -4,47 +4,44 @@
 #include <c/ast/CProgram.hpp>
 #include <c/ast/CType.hpp>
 
+#include <filesystem/File.hpp>
+
 
 // The parser consumes the output of the scanner and emits the AST components while controlling the parsing context.
 class CPrinter {
 private:
-    File &out_;
-    String tab_;
-    u32 depth_ = 0;
+    File &_out;
+    String _tab;
+    u32 _depth = 0;
 public:
 
 
-    CPrinter(
-        File &out
-    ) :
-        out_(out),
-        tab_("    ")
-    {}
+    CPrinter(File &out) : _out(out), _tab("    ") {}
 
 
     void indent() {
-        depth_ += 1;
+        _depth += 1;
     }
 
 
     void undent() {
-        if (depth_) {
-            depth_ -= 1;
+        if (_depth) {
+            _depth -= 1;
         }
     }
 
 
     void newline(u32 n = 1) {
-        out_.write('\n', n);
+        _out.write('\n', n);
 
-        for (u32 i = 0; i < depth_; i++) {
-            out_.write(tab_);
+        for (u32 i = 0; i < _depth; i++) {
+            _out.write(_tab);
         }
     }
 
 
     void write(StringView string) {
-        out_.write(string);
+        _out.write(string);
     }
 
 
@@ -64,7 +61,7 @@ public:
     void print(const CDoWhileStatement &statement);
     void print(const CForStatement &statement);
     void print(const CIfStatement &statement);
-    void print(const CMatchStatement &statement);
+    void print(const CSwitchStatement &statement);
     void print(const CReturnStatement &statement);
     void print(const CWhileStatement &statement);
 
@@ -103,10 +100,6 @@ public:
 
 
     void print(const CUnionType &union_type);
-
-
-    /// @brief Print a module file.
-    void print(const CModule &module);
 
 
     /// @brief Create all module files in the program hierarchy.

@@ -1,10 +1,10 @@
-#include <mj/ast/MjFile.hpp>
+#include <mj/ast/MjSourceFile.hpp>
 
 #include <fstream>
 
 
 
-Error MjFile::load(std::filesystem::path file_path) noexcept {
+Error MjSourceFile::load(std::filesystem::path file_path) noexcept {
 
     // Open file in binary mode and position the cursor at the end to determine file size
     std::basic_ifstream<u8> file_stream(file_path, std::ios::binary | std::ios::ate);

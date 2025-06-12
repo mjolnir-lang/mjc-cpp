@@ -6,8 +6,9 @@
 using String = std::basic_string<u8>;
 
 
-/*
+#include <core/StringView.hpp>
 #include <container/Vector.hpp>
+/*
 
 
 class String {

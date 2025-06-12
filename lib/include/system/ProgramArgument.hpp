@@ -54,6 +54,7 @@ public:
     ProgramArgument(T *value, T default_value = T()) noexcept :
         _data(value),
         _value(default_value),
+        _parser(&StringView::parse<T>),
         _type(arg_type<T>()),
     {}
 
@@ -77,7 +78,7 @@ public:
     constexpr
     ProgramArgument(T *value, ProgramArgumentParser parser, T default_value = T()) noexcept :
         _data(value),
-        _value(value, default_value),
+        _value(default_value),
         _parser(parser, []() { *value = *default_value; }),
         _type(ProgramArgumentType::FUNC)
     {}

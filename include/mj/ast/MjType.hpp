@@ -1,20 +1,20 @@
 #pragma once
 
 #include <mj/ast/MjItem.hpp>
+#include <mj/ast/MjDeclaration.hpp>
 #include <mj/ast/MjAnnotation.hpp>
 #include <mj/ast/MjComment.hpp>
 #include <mj/ast/MjOperatorKind.hpp>
-#include <mj/ast/MjTypeKind.hpp>
 #include <mj/ast/MjTypeQualifiers.hpp>
 
 
 class MjTypeName;
 
 
-class MjType : public MjItem {
-private:
-    Vector<MjItem *> _items;
-public:
+class MjType : public MjDeclaration {
+protected:
+    u32 _size;
+    u32 _alignment;
 
 
     ///
@@ -22,7 +22,11 @@ public:
     ///
 
 
-    MjType(MjTypeKind kind) noexcept : MjItem(MjItemKind::TYPE) {}
+    constexpr
+    MjType(MjItemInfo item_info) noexcept : MjDeclaration(item_info) {}
+
+
+public:
 
 
     ///
@@ -30,137 +34,16 @@ public:
     ///
 
 
-    constexpr
-    bool is_basic_type() noexcept {
-        return _type_kind.is_basic();
-    }
-
-
-    constexpr
-    bool is_derived_type() noexcept {
-        return _type_kind.is_derived();
-    }
-
-
-    constexpr
-    bool is_builtin_type() noexcept {
-        return _type_kind.is_builtin();
-    }
-
-
-    constexpr
-    bool is_type_alias() const noexcept {
-        return _type_kind == MjTypeKind::ALIAS;
-    }
-
-
-    constexpr
-    bool is_void_type() const noexcept {
-        return _type_kind == MjTypeKind::VOID;
-    }
-
-
-    constexpr
-    bool is_array_type() const noexcept {
-        return _type_kind == MjTypeKind::ARRAY;
-    }
-
-
-    constexpr
-    bool is_bitfield_type() const noexcept {
-        return _type_kind == MjTypeKind::BITFIELD;
-    }
-
-
-    constexpr
-    bool is_class_type() const noexcept {
-        return _type_kind == MjTypeKind::CLASS;
-    }
-
-
-    constexpr
-    bool is_enumeration_type() const noexcept {
-        return _type_kind == MjTypeKind::ENUMERATION;
-    }
-
-
-    constexpr
-    bool is_structure_type() const noexcept {
-        return _type_kind == MjTypeKind::STRUCTURE;
-    }
-
-
-    constexpr
-    bool is_union_type() const noexcept {
-        return _type_kind == MjTypeKind::UNION;
-    }
-
-
-    constexpr
-    bool is_variant_type() const noexcept {
-        return _type_kind == MjTypeKind::VARIANT;
-    }
-
-
-    constexpr
-    bool is_interface_type() const noexcept {
-        return _type_kind == MjTypeKind::INTERFACE;
-    }
-
-
-    constexpr
-    bool is_slice_type() const noexcept {
-        return _type_kind == MjTypeKind::SLICE;
-    }
-
-
-    constexpr
-    bool is_pointer_type() const noexcept {
-        return _type_kind == MjTypeKind::POINTER;
-    }
-
-
-    constexpr
-    bool is_method_type() const noexcept {
-        return _type_kind == MjTypeKind::METHOD;
-    }
-
-
-    constexpr
-    bool is_function_type() const noexcept {
-        return _type_kind == MjTypeKind::FUNCTION;
-    }
-
-
-    constexpr
-    bool is_operator_type() const noexcept {
-        return _type_kind == MjTypeKind::OPERATOR;
-    }
-
-
-    constexpr
-    bool is_constructor_type() const noexcept {
-        return _type_kind == MjTypeKind::CONSTRUCTOR;
-    }
-
-
-    constexpr
-    bool is_destructor_type() const noexcept {
-        return _type_kind == MjTypeKind::DESTRUCTOR;
-    }
-
-
     /// Return true if the type is 'const' qualified.
     constexpr
-    bool is_const() const noexcept {
-        return _type_qualifiers & MjTypeQualifiers::CONST;
+    bool is_const_qualified() const noexcept {
+        return is<MjConstantType>();
     }
 
 
-    /// Return true if the type is 'volatile' qualified.
     constexpr
-    bool is_volatile() const noexcept {
-        return _type_qualifiers & MjTypeQualifiers::VOLATILE;
+    bool is_safe_qualified() const noexcept {
+        return is<MjSafeType>();
     }
 
 
@@ -222,83 +105,6 @@ public:
     ///
 
 
-    constexpr
-    bool has_item(MjItemKind item_kind) const noexcept {
-        for (MjItem *item : _items) {
-            if (item->item_kind() == item_kind) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
-    constexpr
-    Slice<MjItem *const> items(MjItemKind item_kind) const noexcept {
-        MjItem *const *data = _items.begin();
-        MjItem *const *end = _items.end();
-
-        for (; data < end; ++data) {
-            if ((*data)->item_kind() == item_kind) {
-                u32 size = 0;
-
-                while (data + size < end && data[size]->item_kind()) {
-                    size += 1;
-                }
-
-                return {data, size};
-            }
-        }
-
-        return nullptr;
-    }
-
-
-    constexpr
-    Slice<MjItem *> items(MjItemKind item_kind) noexcept {
-        MjItem **data = _items.begin();
-        MjItem **end = _items.end();
-
-        for (; data < end; ++data) {
-            if ((*data)->item_kind() == item_kind) {
-                u32 size = 0;
-
-                while (data + size < end && data[size]->item_kind()) {
-                    size += 1;
-                }
-
-                return {data, size};
-            }
-        }
-
-        return nullptr;
-    }
-
-
-    template<class T, class = Where::is_derived_from<MjItem, T>>
-    constexpr
-    bool has_item() const noexcept {
-        return has_item(T::item_kind());
-    }
-
-
-    template<class T, class = Where::is_derived_from<MjItem, T>>
-    constexpr
-    Slice<T *const> items() const noexcept {
-        Slice<MjItem *const> it = items(T::item_kind());
-        return {reinterpret_cast<T *const*>(it.data()), it.size()};
-    }
-
-
-    template<class T, class = Where::is_derived_from<MjItem, T>>
-    constexpr
-    Slice<T *> items() noexcept {
-        Slice<MjItem *> items = this->items(T::item_kind());
-        return {reinterpret_cast<T **>(items.data()), items.size()};
-    }
-
-
     /// Return true if the type has a comment.
     constexpr
     bool has_comment() const noexcept {
@@ -331,8 +137,8 @@ public:
     }
 
 
-    const MjToken *name() const noexcept {
-        return reinterpret_cast<const MjToken *>(_items[_name_index]);
+    const MjTypeName *name() const noexcept {
+        return items<MjTypeName>();
     }
 
 
@@ -365,17 +171,17 @@ public:
 
     constexpr
     bool has_template_argument_list() const noexcept {
-        return _template_argument_list_index > 0;
+        return has_item<MjTemplateArgumentList>();
     }
 
 
     MjTemplateArgumentList *template_argument_list() const noexcept {
-        return *reinterpret_cast<MjTemplateArgumentList *const *>(&_items[_template_argument_list_index]);
+        return items<MjTemplateArgumentList>();
     }
 
 
     MjTemplateArgumentList *template_argument_list() noexcept {
-        return *reinterpret_cast<MjTemplateArgumentList **>(&_items[_template_argument_list_index]);
+        return items<MjTemplateArgumentList>();
     }
 
 
@@ -463,13 +269,17 @@ public:
 
 
     /// @brief Return the size of the type in bytes.
-    virtual
-    u32 size() const noexcept = 0;
+    constexpr
+    u32 size() const noexcept {
+        return _size;
+    }
 
 
     /// @brief Return the alignment of the type in bytes.
-    virtual
-    u32 alignment() const noexcept = 0;
+    constexpr
+    u32 alignment() const noexcept {
+        return _alignment;
+    }
 
 
     ///
@@ -480,24 +290,24 @@ public:
 
 
 
-    const MjType *find_type(const MjToken *name) const noexcept;
+    const MjType *find_type(MjToken name) const noexcept;
 
 
-    const MjType *find_type_template(const MjToken *name, const MjTemplateArgumentList &argument_list) const noexcept;
+    const MjType *find_type_template(MjToken name, const MjTemplateArgumentList &argument_list) const noexcept;
 
 
     /// A variable may be a member or a shared member. It may be a constant as well.
-    const MjVariable *find_variable(const MjToken *name) const noexcept;
+    const MjVariable *find_variable(MjToken name) const noexcept;
 
 
-    const MjVariable *find_member(const MjToken *name) const noexcept;
+    const MjVariable *find_member(MjToken name) const noexcept;
 
 
     /// A function may be a method or a shared function.
-    const MjFunction *find_function(const MjToken *name, const MjFunctionArgumentList &argument_list) const noexcept;
+    const MjFunction *find_function(MjToken name, const MjFunctionArgumentList &argument_list) const noexcept;
 
 
-    const MjMethod *find_method(const MjToken *name, const MjFunctionArgumentList &argument_list) const noexcept;
+    const MjMethod *find_method(MjToken name, const MjFunctionArgumentList &argument_list) const noexcept;
 
 
     /// A method or a function.

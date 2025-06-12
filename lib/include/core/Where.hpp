@@ -151,7 +151,7 @@ namespace Where {
 
     /// Return true if T is a base of the other type.
     template<class T, class Base> using is_base_of = std::is_base_of<Base, T>;
-    //template<class T, class Base> using is_derived_from = std::derived_from<T, Base>;
+    template<class T, class Base> using is_derived_from = std::derived_from<T, Base>;
 
 
     /// Return true if T can be converted to the other type.

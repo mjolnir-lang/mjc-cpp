@@ -68,7 +68,7 @@ public:
     /// @tparam T The type of argument.
     template<class T>
     T &value() const noexcept {
-        return *reinterpret_cast<T *>(_args[_parse_format.index]._value);
+        return *reinterpret_cast<T *>(_args[_format.index]._value);
     }
 
 
@@ -76,7 +76,7 @@ public:
     /// @tparam T The type of argument.
     template<class T>
     void set_value(T value) const noexcept {
-        this.value() = value;
+        this->value<T>() = value;
     }
 private:
 

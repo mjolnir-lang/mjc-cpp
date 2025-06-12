@@ -12,7 +12,7 @@ set(sources
 #file(GLOB_RECURSE sources src/test.cpp include/*.hpp)
 
 add_executable(mjc ${sources})
-target_compile_options(mjc PUBLIC -std=c++23 -O2 -Wall -Wextra -pedantic -funsigned-char)
+target_compile_options(mjc PUBLIC -std=c++23 -O2 -Wall -Wextra -Wno-char-subscripts -pedantic -funsigned-char)
 target_include_directories(mjc PUBLIC include)
 
 target_link_libraries(mjc lib)

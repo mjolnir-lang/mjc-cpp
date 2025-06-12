@@ -7,12 +7,12 @@
 
 void CPrinter::print_type_declaration(const CType &type) {
     switch (type.type()) {
-    case CTypeType::VOID:
-    case CTypeType::ARRAY:
-    case CTypeType::POINTER:
-    case CTypeType::FUNCTION:
-    case CTypeType::ENUMERATION:
-    case CTypeType::STRUCTURE:
+    case CTypeKind::VOID:
+    case CTypeKind::ARRAY:
+    case CTypeKind::POINTER:
+    case CTypeKind::FUNCTION:
+    case CTypeKind::ENUMERATION:
+    case CTypeKind::STRUCTURE:
         print_structure_type_declaration(type);
     default:
     }

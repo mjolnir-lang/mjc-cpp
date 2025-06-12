@@ -121,7 +121,7 @@ Error ProgramArgument::parse(StringView str) {
         }
 
         if (_type.is_vector()) {
-            reinterpret_cast<Vector<u8> *>(_data)->append(value);
+            reinterpret_cast<Vector<u8> *>(_data)->push_back(value);
         } if (_type.is_slice()) {
             (*reinterpret_cast<Slice<u8> *>(_data))[index] = value;
         }

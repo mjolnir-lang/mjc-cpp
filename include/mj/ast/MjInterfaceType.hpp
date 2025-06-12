@@ -1,11 +1,11 @@
 #pragma once
 
-#include <mj/ast/MjInterfaceDefinition.hpp>
+#include <mj/ast/MjType.hpp>
 
 
 class MjInterfaceType : public MjType {
 private:
-    MjInterfaceDefinition *_definition;
+    MjToken _name;
 public:
 
 
@@ -15,7 +15,9 @@ public:
 
 
     constexpr
-    MjInterfaceType() noexcept : MjType() {}
+    MjInterfaceType(MjToken name, Slice<const MjToken> tokens = nullptr) noexcept :
+        MjType(tokens), _name(name)
+    {}
 
 
     ///

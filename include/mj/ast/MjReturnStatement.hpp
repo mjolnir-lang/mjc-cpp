@@ -16,12 +16,12 @@ public:
 
 
     constexpr
-    MjReturnStatement(Slice<const MjToken> tokens = nullptr) noexcept : MjStatement(tokens) {}
+    MjReturnStatement(MjItemInfo item_info) noexcept : MjStatement(item_info) {}
 
 
     constexpr
-    MjReturnStatement(MjExpression *result, Slice<const MjToken> tokens = nullptr) noexcept :
-        MjStatement(tokens),
+    MjReturnStatement(MjItemInfo item_info, MjExpression *result) noexcept :
+        MjStatement(item_info),
         _result(result)
     {}
 
@@ -33,10 +33,6 @@ public:
 
     constexpr
     bool is_deterministic() const noexcept final {
-        if (false) {
-            return _is_deterministic;
-        }
-
         return _result == nullptr || _result->is_deterministic();
     }
 

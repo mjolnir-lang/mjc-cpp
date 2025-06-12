@@ -1,7 +1,7 @@
 #include <mj/MjFormatter.hpp>
 
 
-std::string MjFormatter::format_file(const MjFile &file, const MjFormatterConfig &config) noexcept {
+std::string MjFormatter::format_file(const MjSourceFile &file, const MjFormatterConfig &config) noexcept {
     MjFormatter formatter{file, config};
     formatter.print_tokens();
     return std::move(formatter._out);

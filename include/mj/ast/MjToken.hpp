@@ -31,6 +31,13 @@ public:
 
 
     constexpr
+    explicit
+    operator bool() const noexcept {
+        return _ptr != nullptr;
+    }
+
+
+    constexpr
     bool operator==(MjToken other) const noexcept {
         return _ptr == other._ptr;
     }

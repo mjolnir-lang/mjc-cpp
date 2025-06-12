@@ -1,5 +1,5 @@
 //#include <mj/MjCompiler.hpp>
-//#include <mj/MjLexer.hpp>
+#include <mj/MjLexer.hpp>
 //#include <mj/MjParser.hpp>
 
 #include <system/ProgramCommand.hpp>
@@ -31,62 +31,65 @@ struct Args {
 
 
 Error compile() noexcept {
-    //FilePath src(argv[1]);
-    //FilePath build(src.parent_path() / "build");
-    //FilePath app(build / "app");
 
-    //if (!FileSystem::is_regular_file(src)) {
-    //    Process::STDERR.print("Invalid source file path: %s\n", src.c_str());
-    //    return Error::FAILURE;
+    if (!std::filesystem::is_directory(args.source_dir)) {
+        printf("Invalid source file path: {}\n", args.source_dir);
+        return Error::FAILURE;
+    }
+
+    //if (std::filesystem::is_directory(args.build_dir)) {
+    //  Program::STDERR.print("Build directory already exists: '{}'\n", args.build_dir);
+    //  return Error::FAILURE;
+    //  std::filesystem::remove_all(args.build_dir);
     //}
 
-    //if (FileSystem::exists(build)) {
-        //printf("Build directory already exists: '%s'\n", build.c_str());
-        //return Error::FAILURE;
-        //FileSystem::remove_all(build);
-    //}
-
-    //FileSystem::create_directories(build);
+    //std::filesystem::create_directories(args.build_dir);
 
     //MjParser parser(src);
     //MjProgram program = parser.parse();
 
-    //MjLexer lexer(src);
-    //lexer.parse();
+    MjSourceFile *file = MjLexer::parse_file(args.source_dir / "Test.mj");
 
-    //for (const MjToken &token : lexer.tokens()) {
-    //    StringView text = lexer.token_text(token);
-    //    printf("%.*s\n", text.size(), text.data());
-    //}
+    for (auto token : file->tokens()) {
+        StringView text = file->token_text(token);
+        Program::STDOUT.print("{}\n", text);
+    }
 
     return Error::SUCCESS;
 }
+
+/*
+const ProgramOption compile_opts[] {
+    ProgramOption('I', "include",     &args.include_dirs),
+    ProgramOption('b', "build",       &args.build_dir),
+    ProgramOption('o',                &args.output_file),
+    ProgramOption('t', "target",      &args.target_name),
+    ProgramOption(     "arch",        &args.arch_name),
+    ProgramOption(     "cpu",         &args.cpu_name),
+    ProgramOption('O',                &args.output_file),
+    ProgramOption('g', "debug",       &args.debug),
+    ProgramOption('c', "asm-only",    &args.asm_only),
+    ProgramOption('S', "obj-only",    &args.obj_only),
+    ProgramOption('m', "shared",      &args.shared),
+    ProgramOption(     "color",       &args.color),
+    ProgramOption(     "no-color",    &args.no_color),
+    ProgramOption('i', "interactive", &args.interactive),
+    ProgramOption('q', "quiet",       &args.quiet),
+    ProgramOption('v', "verbose",     &args.verbose),
+    ProgramOption(     "dep",         &args.dep),
+};
+
+
+const ProgramArgument compile_args[] {
+    ProgramArgument(&args.source_dir),
+};
 
 
 const ProgramCommand program_cmd{
     "mjc",
     &compile,
-    {
-        ProgramOption('I', "include",     &args.include_dirs),
-        ProgramOption('b', "build",       &args.build_dir),
-        ProgramOption('o',                &args.output_file),
-        ProgramOption('t', "target",      &args.target_name),
-        ProgramOption(     "arch",        &args.arch_name),
-        ProgramOption(     "cpu",         &args.cpu_name),
-        ProgramOption('O',                &args.output_file),
-        ProgramOption('g', "debug",       &args.debug),
-        ProgramOption('c', "asm-only",    &args.asm_only),
-        ProgramOption('S', "obj-only",    &args.obj_only),
-        ProgramOption('m', "shared",      &args.shared),
-        ProgramOption(     "color",       &args.color),
-        ProgramOption(     "no-color",    &args.no_color),
-        ProgramOption('i', "interactive", &args.interactive),
-        ProgramOption('q', "quiet",       &args.quiet),
-        ProgramOption('v', "verbose",     &args.verbose),
-        ProgramOption(     "dep",         &args.dep),
-    }, {
-        ProgramArgument(&args.source_dir),
-    },
+    compile_opts,
+    compile_args,
     1,
     "Usage: mjc [options] [src]\n"
     "\n"
@@ -128,14 +131,19 @@ const ProgramCommand program_cmd{
     "  src                  The target path (default: <current directory>)\n",
     "mjc 0.0.0"
 };
-
+*/
 
 int main(int argc, const char *argv[]) {
+    /*
     Vector<StringView> args;
 
     for (u32 i = 1; i < argc; ++i) {
-        args.push_back(argv[i]);
+        args.emplace_back(argv[i]);
     }
 
     return program_cmd.parse_and_run({args.data(), args.size()});
+    */
+
+    args.source_dir = argv[1];
+    return compile();
 }
